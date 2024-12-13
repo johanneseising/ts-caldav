@@ -1,18 +1,13 @@
 import axios, { AxiosInstance } from "axios";
-import { CalDAVOptions } from "./models";
-import { parseString, parseStringPromise } from "xml2js";
-
-export async function parseXML<T>(xml: string): Promise<T> {
-  return await parseStringPromise(xml, {
-    explicitArray: false,
-    mergeAttrs: true,
-  });
-}
+import { CalDAVOptions, Calendar } from "./models";
+import { parseString } from "xml2js";
+import { parseCalendars } from "./utils/parser";
 
 export class CalDAVClient {
   private httpClient: AxiosInstance;
   public calendarHome: string | null;
   public userPrincipal: string | null;
+  public requestTimeout: number;
 
   private constructor(private options: CalDAVOptions) {
     this.httpClient = axios.create({
@@ -23,9 +18,11 @@ export class CalDAVClient {
         ).toString("base64")}`,
         "Content-Type": "application/xml; charset=utf-8",
       },
+      timeout: options.requestTimeout || 5000,
     });
     this.calendarHome = null;
     this.userPrincipal = null;
+    this.requestTimeout = options.requestTimeout || 5000;
   }
 
   /**
@@ -65,12 +62,10 @@ export class CalDAVClient {
           Depth: "0",
           Prefer: "return=minimal",
         },
+        validateStatus: (status) => status === 207,
       });
 
-      if (
-        response.status !== 207 ||
-        !response.data.includes("current-user-principal")
-      ) {
+      if (!response.data.includes("current-user-principal")) {
         throw new Error(
           "Invalid credentials: Unable to authenticate with the server."
         );
@@ -104,6 +99,7 @@ export class CalDAVClient {
       headers: {
         Depth: "0",
       },
+      validateStatus: (status) => status === 207,
     });
 
     parseString(response.data, (err, result) => {
@@ -114,5 +110,33 @@ export class CalDAVClient {
     });
 
     return this.calendarHome;
+  }
+
+  public async getCalendars(): Promise<Calendar[]> {
+    if (!this.calendarHome) {
+      throw new Error("Calendar home not found.");
+    }
+
+    const requestBody = `
+      <d:propfind xmlns:d="DAV:" xmlns:cs="http://calendarserver.org/ns/" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:prop>
+          <d:resourcetype />
+          <d:displayname />
+          <cs:getctag />
+          <c:supported-calendar-component-set />
+        </d:prop>
+      </d:propfind>`;
+
+    const response = await this.httpClient.request({
+      method: "PROPFIND",
+      url: this.calendarHome,
+      data: requestBody,
+      headers: {
+        Depth: "1",
+      },
+      validateStatus: (status) => status === 207,
+    });
+
+    return parseCalendars(response.data);
   }
 }
