@@ -71,7 +71,7 @@ This project uses [ESLint](https://eslint.org/) for consistent code style. Run `
 
 - [x] Authenticate with CalDAV servers.
 - [x] Validate credentials during initialization.
-- [ ] Add support for listing calendars.
+- [x] Add support for listing calendars.
 - [ ] Implement event creation and management.
 - [ ] Enhance error handling and debugging tools.
 - [ ] Support task (VTODO) management.
