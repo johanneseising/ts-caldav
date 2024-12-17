@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import { CalDAVOptions, Calendar } from "./models";
 import { parseString } from "xml2js";
+import { encode } from "base-64";
 import { parseCalendars } from "./utils/parser";
 
 export class CalDAVClient {
@@ -13,9 +14,9 @@ export class CalDAVClient {
     this.httpClient = axios.create({
       baseURL: options.baseUrl,
       headers: {
-        Authorization: `Basic ${Buffer.from(
+        Authorization: `Basic ${encode(
           `${options.username}:${options.password}`
-        ).toString("base64")}`,
+        )}`,
         "Content-Type": "application/xml; charset=utf-8",
       },
       timeout: options.requestTimeout || 5000,
