@@ -77,6 +77,7 @@ This project uses [ESLint](https://eslint.org/) for consistent code style. Run `
 - [ ] Support task (VTODO) management.
 - [ ] Improve documentation with examples.
 - [ ] Implement Syncing via Change Tags
+- [ ] Test react-native usage.
 
 ## License
 
