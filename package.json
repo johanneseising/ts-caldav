@@ -1,11 +1,12 @@
 {
-  "name": "caldav",
+  "name": "ts-caldav",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
