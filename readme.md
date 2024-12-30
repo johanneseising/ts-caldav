@@ -9,6 +9,18 @@ A lightweight and robust CalDAV client for Node.js applications, written in Type
 - 🔒 Built-in credential validation.
 - 🛠️ Fully written in TypeScript.
 
+## Getting started
+### Create Client
+By creating a client, you can now use all methods without supplying authentication information.
+
+```typescript
+CalDAVClient.create({
+   baseUrl: "https://yourcaldavserver.org",
+   username: "YOUR_USERNAME",
+   password: "YOUR_PASSWORT",
+})
+```
+
 ## Contributing
 
 We welcome contributions! Follow the steps below to get started:
