@@ -1,15 +1,15 @@
 {
   "name": "ts-caldav",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.0.1",
+  "description": "A simple CalDAV client written in TypeScript",
+  "main": "dist/index.js",
   "scripts": {
     "test": "jest",
     "lint": "eslint",
     "build": "tsc"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["caldav", "typescript", "calendar", "client", "caldav-client", "ts-caldav"],
+  "author": "KlautNet",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.7.9",
