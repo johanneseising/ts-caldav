@@ -1,2 +1,2 @@
 export { CalDAVClient } from "./client";
-export { CalDAVOptions, Calendar, Event } from "./models";
+export type { CalDAVOptions, Calendar, Event } from "./models";

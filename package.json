@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "A simple CalDAV client written in TypeScript",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
     "lint": "eslint",
