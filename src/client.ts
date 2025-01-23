@@ -1,8 +1,8 @@
 import axios, { AxiosInstance } from "axios";
 import { CalDAVOptions, Calendar } from "./models";
-import { parseString } from "xml2js";
 import { encode } from "base-64";
 import { parseCalendars } from "./utils/parser";
+import { XMLParser } from "fast-xml-parser";
 
 export class CalDAVClient {
   private httpClient: AxiosInstance;
@@ -47,6 +47,8 @@ export class CalDAVClient {
   }
 
   private async validateCredentials(): Promise<void> {
+    console.log("Auth:", this.httpClient.defaults.headers);
+
     const requestBody = `
         <d:propfind xmlns:d="DAV:">
         <d:prop>
@@ -66,19 +68,22 @@ export class CalDAVClient {
         validateStatus: (status) => status === 207,
       });
 
+      console.log(response.data);
+
       if (!response.data.includes("current-user-principal")) {
         throw new Error(
-          "Invalid credentials: Unable to authenticate with the server."
+          "User principal not found: Unable to authenticate with the server."
         );
       }
-      parseString(response.data, (err, result) => {
-        this.userPrincipal =
-          result["D:multistatus"]["D:response"][0]["D:propstat"][0][
-            "D:prop"
-          ][0]["D:current-user-principal"][0]["D:href"][0];
-      });
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
+      const parser = new XMLParser();
+      const jsonData = parser.parse(response.data);
+      this.userPrincipal =
+        jsonData["D:multistatus"]["D:response"]["D:propstat"]["D:prop"][
+          "D:current-user-principal"
+        ]["D:href"];
     } catch (error) {
+      console.log(error);
       throw new Error(
         "Invalid credentials: Unable to authenticate with the server."
       );
@@ -103,12 +108,13 @@ export class CalDAVClient {
       validateStatus: (status) => status === 207,
     });
 
-    parseString(response.data, (err, result) => {
-      this.calendarHome =
-        result["D:multistatus"]["D:response"][0]["D:propstat"][0]["D:prop"][0][
-          "C:calendar-home-set"
-        ][0]["D:href"][0];
-    });
+    const parser = new XMLParser();
+    const jsonData = parser.parse(response.data);
+
+    this.calendarHome =
+      jsonData["D:multistatus"]["D:response"]["D:propstat"]["D:prop"][
+        "C:calendar-home-set"
+      ]["D:href"];
 
     return this.calendarHome;
   }

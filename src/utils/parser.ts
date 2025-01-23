@@ -1,4 +1,4 @@
-import { parseStringPromise } from "xml2js";
+import { XMLParser } from "fast-xml-parser";
 import { Calendar, Event } from "../models";
 
 export const parseCalendars = async (
@@ -6,25 +6,26 @@ export const parseCalendars = async (
 ): Promise<Calendar[]> => {
   const calendars = [];
 
-  const xml = await parseStringPromise(responseData);
-  const response = xml["D:multistatus"]["D:response"];
+  const parser = new XMLParser();
+  const jsonData = parser.parse(responseData);
+  const response = jsonData["D:multistatus"]["D:response"];
 
   for (const obj of response) {
-    const calendarData = obj["D:propstat"][0]["D:prop"][0];
+    const calendarData = obj["D:propstat"]["D:prop"];
 
     if (calendarData) {
       const calendar = {
         displayName: calendarData["D:displayname"]
-          ? calendarData["D:displayname"][0]
+          ? calendarData["D:displayname"]
           : "",
-        url: obj["D:href"][0],
-        ctag: calendarData["CS:getctag"][0],
-        supportedComponents: calendarData[
-          "C:supported-calendar-component-set"
-        ][0]["C:comp"]
-          ? calendarData["C:supported-calendar-component-set"][0]["C:comp"].map(
+        url: obj["D:href"],
+        ctag: calendarData["CS:getctag"],
+        supportedComponents: calendarData["C:supported-calendar-component-set"][
+          "C:comp"
+        ]
+          ? calendarData["C:supported-calendar-component-set"]["C:comp"].map(
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (comp: any) => comp["$"]["name"]
+              (comp: any) => comp["name"]
             )
           : [],
       };
@@ -38,20 +39,21 @@ export const parseCalendars = async (
 
 export const parseEvents = async (responseData: string): Promise<Event[]> => {
   const events = [];
+  const parser = new XMLParser();
+  const jsonData = parser.parse(responseData);
 
-  const xml = await parseStringPromise(responseData);
-  const response = xml["D:multistatus"]["D:response"];
+  const response = jsonData["D:multistatus"]["D:response"];
 
   for (const obj of response) {
     const eventData = obj["D:propstat"][0]["D:prop"][0];
 
     if (eventData) {
       const event = {
-        uid: eventData["CS:getetag"][0],
-        summary: eventData["D:displayname"][0],
-        start: new Date(eventData["D:getlastmodified"][0]),
-        end: new Date(eventData["D:getlastmodified"][0]),
-        description: eventData["D:getlastmodified"][0],
+        uid: eventData["CS:getetag"],
+        summary: eventData["D:displayname"],
+        start: new Date(eventData["D:getlastmodified"]),
+        end: new Date(eventData["D:getlastmodified"]),
+        description: eventData["D:getlastmodified"],
       };
 
       events.push(event);
