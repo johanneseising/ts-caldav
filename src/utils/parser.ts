@@ -33,7 +33,6 @@ export const parseCalendars = async (
       calendars.push(calendar);
     }
   }
-
   return calendars;
 };
 
@@ -59,8 +58,6 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
       events.push(event);
     }
   }
-
-  console.log(events);
 
   return events;
 };

@@ -24,6 +24,14 @@ export class CalDAVClient {
     this.calendarHome = null;
     this.userPrincipal = null;
     this.requestTimeout = options.requestTimeout || 5000;
+
+    if (options.logRequests) {
+      this.httpClient.interceptors.request.use((request) => {
+        console.log("Request to " + request.url);
+        console.log(JSON.stringify(request, null, 2));
+        return request;
+      });
+    }
   }
 
   /**
@@ -47,8 +55,6 @@ export class CalDAVClient {
   }
 
   private async validateCredentials(): Promise<void> {
-    console.log("Auth:", this.httpClient.defaults.headers);
-
     const requestBody = `
         <d:propfind xmlns:d="DAV:">
         <d:prop>
@@ -67,8 +73,6 @@ export class CalDAVClient {
         },
         validateStatus: (status) => status === 207,
       });
-
-      console.log(response.data);
 
       if (!response.data.includes("current-user-principal")) {
         throw new Error(

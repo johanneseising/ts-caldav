@@ -11,6 +11,7 @@ describe("CalDAVClient Credential Validation", () => {
       baseUrl: process.env.CALDAV_BASE_URL!,
       username: process.env.CALDAV_USERNAME!,
       password: process.env.CALDAV_PASSWORD!,
+      logRequests: true,
     });
   });
 

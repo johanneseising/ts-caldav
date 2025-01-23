@@ -3,6 +3,7 @@ export interface CalDAVOptions {
   username: string;
   password: string;
   requestTimeout?: number;
+  logRequests?: boolean;
 }
 
 type SupportedComponent =
