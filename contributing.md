@@ -6,7 +6,7 @@
 2. Clone your fork:
 
    ```bash
-   git clone https://github.com/your-username/caldav-client.git
+   git clone https://github.com/your-username/ts-caldav.git
    cd caldav-client
    ```
 
@@ -16,7 +16,7 @@
    pnpm install
    ```
 
-4. Add the environment variable needed for testing
+4. Add the environment variables needed for testing
 
     ```env
     CALDAV_BASE_URL=

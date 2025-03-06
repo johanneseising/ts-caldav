@@ -13,10 +13,10 @@
 
 ## Installation
 
-Install via npm:
+Install via pnpm:
 
 ```sh
-npm install ts-caldav
+pnpm install ts-caldav
 ```
 
 or via yarn:
@@ -99,6 +99,10 @@ Creates a new event and returns its UID.
 
 Deletes an event from the calendar.
 
+## Contributing
+
+Contributions are very welcome! Take a look at [CONTRIBUTING](./contributing.md) to get started.
+
 ## Roadmap
 
 - [x] Authenticate with CalDAV servers.
@@ -113,4 +117,4 @@ Deletes an event from the calendar.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](./license.txt) file for details.
