@@ -25,17 +25,17 @@ describe("CalDAVClient Credential Validation", () => {
     );
   });
 
-  // test("Invalid credentials throw an error", async () => {
-  //   await expect(
-  //     CalDAVClient.create({
-  //       baseUrl: process.env.CALDAV_BASE_URL!,
-  //       username: "invalid",
-  //       password: "invalid",
-  //     })
-  //   ).rejects.toThrow(
-  //     "Invalid credentials: Unable to authenticate with the server."
-  //   );
-  // });
+  test("Invalid credentials throw an error", async () => {
+    await expect(
+      CalDAVClient.create({
+        baseUrl: process.env.CALDAV_BASE_URL!,
+        username: "invalid",
+        password: "invalid",
+      })
+    ).rejects.toThrow(
+      "Invalid credentials: Unable to authenticate with the server."
+    );
+  });
 
   test("Get calendar home", async () => {
     const calendarHome = await client.getCalendarHome();

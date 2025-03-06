@@ -27,8 +27,6 @@ export class CalDAVClient {
 
     if (options.logRequests) {
       this.httpClient.interceptors.request.use((request) => {
-        console.log("Request to " + request.url);
-        console.log(JSON.stringify(request, null, 2));
         return request;
       });
     }
@@ -87,9 +85,8 @@ export class CalDAVClient {
           "D:current-user-principal"
         ]["D:href"];
     } catch (error) {
-      console.log(error);
       throw new Error(
-        "Invalid credentials: Unable to authenticate with the server."
+        "Invalid credentials: Unable to authenticate with the server." + error
       );
     }
   }
