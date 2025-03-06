@@ -20,6 +20,12 @@ importers:
       fast-xml-parser:
         specifier: ^4.5.1
         version: 4.5.1
+      ical.js:
+        specifier: ^2.1.0
+        version: 2.1.0
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
     devDependencies:
       '@eslint/js':
         specifier: ^9.16.0
@@ -915,6 +921,9 @@ packages:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
     engines: {node: '>=10.17.0'}
 
+  ical.js@2.1.0:
+    resolution: {integrity: sha512-BOVfrH55xQ6kpS3muGvIXIg2l7p+eoe12/oS7R5yrO3TL/j/bLsR0PR+tYQESFbyTbvGgPHn9zQ6tI4FWyuSaQ==}
+
   ignore@5.3.2:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
     engines: {node: '>= 4'}
@@ -1547,6 +1556,10 @@ packages:
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
+
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
 
   v8-to-istanbul@9.3.0:
     resolution: {integrity: sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA==}
@@ -2632,6 +2645,8 @@ snapshots:
 
   human-signals@2.1.0: {}
 
+  ical.js@2.1.0: {}
+
   ignore@5.3.2: {}
 
   import-fresh@3.3.0:
@@ -3377,6 +3392,8 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  uuid@11.1.0: {}
 
   v8-to-istanbul@9.3.0:
     dependencies:

@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { Calendar, Event } from "../models";
+import ICAL from "ical.js";
 
 export const parseCalendars = async (
   responseData: string
@@ -38,24 +39,48 @@ export const parseCalendars = async (
 
 export const parseEvents = async (responseData: string): Promise<Event[]> => {
   const events = [];
+
   const parser = new XMLParser();
   const jsonData = parser.parse(responseData);
+  let response = jsonData["D:multistatus"]["D:response"];
 
-  const response = jsonData["D:multistatus"]["D:response"];
+  // Ensure response is always an array
+  if (!Array.isArray(response)) {
+    response = [response];
+  }
 
   for (const obj of response) {
-    const eventData = obj["D:propstat"][0]["D:prop"][0];
+    const eventData = obj["D:propstat"]?.["D:prop"];
+    if (!eventData) continue;
 
-    if (eventData) {
-      const event = {
-        uid: eventData["CS:getetag"],
-        summary: eventData["D:displayname"],
-        start: new Date(eventData["D:getlastmodified"]),
-        end: new Date(eventData["D:getlastmodified"]),
-        description: eventData["D:getlastmodified"],
-      };
+    const rawCalendarData = eventData["C:calendar-data"];
+    if (!rawCalendarData) continue;
 
-      events.push(event);
+    const cleanedCalendarData = rawCalendarData.replace(/&#13;/g, "\r\n");
+
+    try {
+      const jcalData = ICAL.parse(cleanedCalendarData);
+      const vcalendar = new ICAL.Component(jcalData);
+      const vevent = vcalendar.getFirstSubcomponent("vevent");
+
+      if (!vevent) {
+        console.warn("Skipping invalid event, no VEVENT found.");
+        continue;
+      }
+
+      const icalEvent = new ICAL.Event(vevent);
+
+      events.push({
+        uid: icalEvent.uid,
+        summary: icalEvent.summary || "Untitled Event",
+        start: icalEvent.startDate.toJSDate(),
+        end: icalEvent.endDate
+          ? icalEvent.endDate.toJSDate()
+          : icalEvent.startDate.toJSDate(),
+        description: icalEvent.description || "",
+      });
+    } catch (error) {
+      console.error("Error parsing event data:", error);
     }
   }
 

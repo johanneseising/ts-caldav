@@ -1,90 +1,110 @@
-# CalDAV Client for Node.js
+# ts-caldav
 
-A lightweight and robust CalDAV client for Node.js applications, written in TypeScript. This library enables seamless integration with CalDAV servers to manage calendars, events, and tasks.
+🚀 A lightweight **TypeScript CalDAV client** for interacting with calendar servers. Supports authentication, event retrieval, creation, and deletion.
 
 ## Features
 
-- 🗓️ Authenticate and interact with CalDAV servers.
-- ⚡ Simple and intuitive API.
-- 🔒 Built-in credential validation.
-- 🛠️ Fully written in TypeScript.
+- 📅 Fetch user calendars
+- 📌 Retrieve events from a calendar
+- ✍️ Create new events
+- 🗑️ Delete events
+- 🔐 Basic authentication support
+- ⏳ Request logging (optional)
 
-## Getting started
-### Create Client
-By creating a client, you can now use all methods without supplying authentication information.
+## Installation
 
-```typescript
-CalDAVClient.create({
-   baseUrl: "https://yourcaldavserver.org",
-   username: "YOUR_USERNAME",
-   password: "YOUR_PASSWORT",
-})
+Install via npm:
+
+```sh
+npm install ts-caldav
 ```
 
-## Contributing
+or via yarn:
 
-We welcome contributions! Follow the steps below to get started:
+```sh
+yarn add ts-caldav
+```
 
-1. Fork the repository.
-2. Clone your fork:
+## Usage
 
-   ```bash
-   git clone https://github.com/your-username/caldav-client.git
-   cd caldav-client
-   ```
+### 1️⃣ Create a Client Instance
 
-3. Install dependencies:
+```typescript
+import { CalDAVClient } from "ts-caldav";
 
-   ```bash
-   pnpm install
-   ```
+(async () => {
+  const client = await CalDAVClient.create({
+    baseUrl: "https://caldav.example.com",
+    username: "your-username",
+    password: "your-password",
+    requestTimeout: 5000, // Optional
+    logRequests: true, // Optional
+  });
+})();
+```
 
-4. Add the environment variable needed for testing
+### 2️⃣ Fetch User Calendars
 
-    ```env
-    CALDAV_BASE_URL=
-    CALDAV_USERNAME=
-    CALDAV_PASSWORD=
-    ```
+```typescript
+const calendars = await client.getCalendars();
+console.log(calendars);
+```
 
-5. Create a new branch for your feature:
+### 3️⃣ Retrieve Events
 
-   ```bash
-   git checkout -b feature-name
-   ```
+```typescript
+const events = await client.getEvents("https://caldav.example.com/user/calendar");
+console.log(events);
+```
 
-6. Make your changes and run tests:
+### 4️⃣ Create a New Event
 
-   ```bash
-   pnpm test
-   ```
+```typescript
+const eventUid = await client.createEvent("https://caldav.example.com/user/calendar", {
+  summary: "Meeting with Bob",
+  start: new Date("2025-03-07T10:00:00Z"),
+  end: new Date("2025-03-07T11:00:00Z"),
+  description: "Discuss project updates",
+  location: "Office",
+});
+console.log("Created Event UID:", eventUid);
+```
 
-7. Lint your code:
+### 5️⃣ Delete an Event
 
-   ```bash
-   pnpm run lint
-   ```
+```typescript
+await client.deleteEvent("https://caldav.example.com/user/calendar", "event-uid");
+console.log("Event deleted.");
+```
 
-8. Commit and push your changes:
+## API Reference
 
-   ```bash
-   git add .
-   git commit -m "Add feature-name"
-   git push origin feature-name
-   ```
+### `CalDAVClient.create(options: CalDAVOptions): Promise<CalDAVClient>`
 
-9.  Open a pull request.
+Creates a new client instance and validates credentials.
 
-### Code Style
+### `getCalendars(): Promise<Calendar[]>`
 
-This project uses [ESLint](https://eslint.org/) for consistent code style. Run `pnpm run lint` to check for linting errors.
+Retrieves available calendars for the user.
+
+### `getEvents(calendarUrl: string): Promise<Event[]>`
+
+Fetches events from the specified calendar.
+
+### `createEvent(calendarUrl: string, eventData: Partial<Event>): Promise<string>`
+
+Creates a new event and returns its UID.
+
+### `deleteEvent(calendarUrl: string, eventUid: string): Promise<void>`
+
+Deletes an event from the calendar.
 
 ## Roadmap
 
 - [x] Authenticate with CalDAV servers.
 - [x] Validate credentials during initialization.
 - [x] Add support for listing calendars.
-- [ ] Implement event creation and management.
+- [x] Implement event creation and management.
 - [ ] Enhance error handling and debugging tools.
 - [ ] Support task (VTODO) management.
 - [ ] Improve documentation with examples.
