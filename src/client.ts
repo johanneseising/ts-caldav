@@ -84,13 +84,14 @@ export class CalDAVClient {
           "User principal not found: Unable to authenticate with the server."
         );
       }
-
-      const parser = new XMLParser();
-      const jsonData = parser.parse(response.data);
+      const parser = new XMLParser({
+        removeNSPrefix: true,
+      });
+      const jsonData = parser.parse(response.data, {});
       this.userPrincipal =
-        jsonData["D:multistatus"]["D:response"]["D:propstat"]["D:prop"][
-          "D:current-user-principal"
-        ]["D:href"];
+        jsonData["multistatus"]["response"]["propstat"]["prop"][
+          "current-user-principal"
+        ]["href"];
     } catch (error) {
       throw new Error(
         "Invalid credentials: Unable to authenticate with the server." + error
@@ -116,13 +117,13 @@ export class CalDAVClient {
       validateStatus: (status) => status === 207,
     });
 
-    const parser = new XMLParser();
+    const parser = new XMLParser({ removeNSPrefix: true });
     const jsonData = parser.parse(response.data);
 
     this.calendarHome =
-      jsonData["D:multistatus"]["D:response"]["D:propstat"]["D:prop"][
-        "C:calendar-home-set"
-      ]["D:href"];
+      jsonData["multistatus"]["response"]["propstat"]["prop"][
+        "calendar-home-set"
+      ]["href"];
 
     return this.calendarHome;
   }

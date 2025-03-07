@@ -17,6 +17,7 @@
    ```
 
 4. Add the environment variables needed for testing
+   The account referenced should have at least one calendar with at least one event.
 
     ```env
     CALDAV_BASE_URL=

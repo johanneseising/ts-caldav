@@ -7,24 +7,24 @@ export const parseCalendars = async (
 ): Promise<Calendar[]> => {
   const calendars = [];
 
-  const parser = new XMLParser();
+  const parser = new XMLParser({ removeNSPrefix: true });
   const jsonData = parser.parse(responseData);
-  const response = jsonData["D:multistatus"]["D:response"];
+  const response = jsonData["multistatus"]["response"];
 
   for (const obj of response) {
-    const calendarData = obj["D:propstat"]["D:prop"];
+    const calendarData = obj["propstat"]["prop"];
 
     if (calendarData) {
       const calendar = {
-        displayName: calendarData["D:displayname"]
-          ? calendarData["D:displayname"]
+        displayName: calendarData["displayname"]
+          ? calendarData["displayname"]
           : "",
-        url: obj["D:href"],
-        ctag: calendarData["CS:getctag"],
-        supportedComponents: calendarData["C:supported-calendar-component-set"][
-          "C:comp"
+        url: obj["href"],
+        ctag: calendarData["getctag"],
+        supportedComponents: calendarData["supported-calendar-component-set"][
+          "comp"
         ]
-          ? calendarData["C:supported-calendar-component-set"]["C:comp"].map(
+          ? calendarData["supported-calendar-component-set"]["comp"].map(
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (comp: any) => comp["name"]
             )
@@ -38,22 +38,24 @@ export const parseCalendars = async (
 };
 
 export const parseEvents = async (responseData: string): Promise<Event[]> => {
-  const events = [];
+  const events: Event[] = [];
 
-  const parser = new XMLParser();
+  const parser = new XMLParser({ removeNSPrefix: true });
   const jsonData = parser.parse(responseData);
-  let response = jsonData["D:multistatus"]["D:response"];
+  let response = jsonData["multistatus"]["response"];
+  if (!response) {
+    return events;
+  }
 
-  // Ensure response is always an array
   if (!Array.isArray(response)) {
     response = [response];
   }
 
   for (const obj of response) {
-    const eventData = obj["D:propstat"]?.["D:prop"];
+    const eventData = obj["propstat"]?.["prop"];
     if (!eventData) continue;
 
-    const rawCalendarData = eventData["C:calendar-data"];
+    const rawCalendarData = eventData["calendar-data"];
     if (!rawCalendarData) continue;
 
     const cleanedCalendarData = rawCalendarData.replace(/&#13;/g, "\r\n");
@@ -78,6 +80,7 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
           ? icalEvent.endDate.toJSDate()
           : icalEvent.startDate.toJSDate(),
         description: icalEvent.description || "",
+        location: icalEvent.location || "",
       });
     } catch (error) {
       console.error("Error parsing event data:", error);
