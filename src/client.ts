@@ -213,7 +213,7 @@ export class CalDAVClient {
    */
   public async createEvent(
     calendarUrl: string,
-    eventData: PartialBy<Event, "uid">
+    eventData: PartialBy<Event, "uid" | "href" | "etag">
   ): Promise<{
     uid: string;
     href: string;

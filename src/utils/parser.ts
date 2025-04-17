@@ -81,6 +81,7 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
         description: icalEvent.description || "",
         location: icalEvent.location || "",
         etag: eventData["getetag"] || "",
+        href: obj["href"],
       });
     } catch (error) {
       console.error("Error parsing event data:", error);

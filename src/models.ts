@@ -41,7 +41,8 @@ export interface Event {
   end: Date;
   description?: string;
   location?: string;
-  etag?: string;
+  etag: string;
+  href: string;
 }
 
 export type CalDAVResponse<T> = {
