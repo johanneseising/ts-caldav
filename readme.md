@@ -180,12 +180,6 @@ npm run build
 
 ---
 
-## 📄 License
-
-MIT © [Your Name]
-
----
-
 ## 🤝 Contributing
 
 Contributions are very welcome! Take a look at [CONTRIBUTING](./contributing.md) to get started.
