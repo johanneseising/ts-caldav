@@ -57,7 +57,6 @@ describe("CalDAVClient Calendar Operations", () => {
   test("Get events", async () => {
     const calendars = await client.getCalendars();
     const events = await client.getEvents(calendars[0].url);
-
     expect(events).toBeDefined();
     expect(events).toBeInstanceOf(Array);
     expect(events.length).toBeGreaterThan(0);
@@ -69,15 +68,15 @@ describe("CalDAVClient Calendar Operations", () => {
     const calendars = await client.getCalendars();
     const now = new Date();
     const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
-    eventUid = await client.createEvent(calendars[0].url, {
+    const res = await client.createEvent(calendars[0].url, {
       start: now,
       end: inOneHour,
       summary: "Test Event",
       location: "Test Location",
       description: "This is a test event.",
     });
-
-    expect(eventUid).toBeDefined();
+    eventUid = res.uid; // Store the UID for later use
+    expect(res).toBeDefined();
   });
 
   test("Duplicate event creation fails", async () => {
@@ -114,15 +113,15 @@ describe("CalDAVClient Calendar Operations", () => {
     const calendars = await client.getCalendars();
     const now = new Date();
     const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
-    eventUid = await client.createEvent(calendars[0].url, {
+    const res = await client.createEvent(calendars[0].url, {
       start: now,
       end: inOneHour,
       summary: "Test Event for Sync",
       location: "Test Location",
       description: "This is a test event.",
     });
-
-    expect(eventUid).toBeDefined();
+    eventUid = res.uid; // Store the UID for later use
+    expect(res).toBeDefined();
   });
 
   test("Sync changes", async () => {

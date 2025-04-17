@@ -214,12 +214,18 @@ export class CalDAVClient {
   public async createEvent(
     calendarUrl: string,
     eventData: PartialBy<Event, "uid">
-  ): Promise<string> {
+  ): Promise<{
+    uid: string;
+    href: string;
+    etag: string;
+    newCtag: string;
+  }> {
     if (!calendarUrl) {
       throw new Error("Calendar URL is required to create an event.");
     }
 
     const eventUid = eventData.uid || uuidv4();
+    const href = `${calendarUrl}/${eventUid}.ics`;
 
     const vevent = `
       BEGIN:VCALENDAR
@@ -238,7 +244,7 @@ export class CalDAVClient {
     `.replace(/^\s+/gm, "");
 
     try {
-      await this.httpClient.put(`${calendarUrl}/${eventUid}.ics`, vevent, {
+      const response = await this.httpClient.put(href, vevent, {
         headers: {
           "Content-Type": "text/calendar; charset=utf-8",
           "If-None-Match": "*",
@@ -246,7 +252,19 @@ export class CalDAVClient {
         validateStatus: (status) => status === 201 || status === 204,
       });
 
-      return eventUid;
+      const etag = response.headers["etag"] || ""; // servers usually return it here
+
+      // Fetch updated ctag
+      const newCtag = await this.getCtag(calendarUrl);
+
+      return {
+        uid: eventUid,
+        href: `${
+          calendarUrl.endsWith("/") ? calendarUrl : calendarUrl + "/"
+        }${eventUid}.ics`,
+        etag,
+        newCtag,
+      };
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 412) {
         throw new Error(`Event with the specified uid already exists.`);
