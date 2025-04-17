@@ -3,29 +3,29 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// describe("CalDAVClient Credential Validation", () => {
-//   test("Valid credentials initialize the client successfully", async () => {
-//     expect(
-//       await CalDAVClient.create({
-//         baseUrl: process.env.CALDAV_BASE_URL!,
-//         username: process.env.CALDAV_USERNAME!,
-//         password: process.env.CALDAV_PASSWORD!,
-//       })
-//     ).toBeInstanceOf(CalDAVClient);
-//   });
+describe("CalDAVClient Credential Validation", () => {
+  test("Valid credentials initialize the client successfully", async () => {
+    expect(
+      await CalDAVClient.create({
+        baseUrl: process.env.CALDAV_BASE_URL!,
+        username: process.env.CALDAV_USERNAME!,
+        password: process.env.CALDAV_PASSWORD!,
+      })
+    ).toBeInstanceOf(CalDAVClient);
+  });
 
-//   test("Invalid credentials throw an error", async () => {
-//     await expect(
-//       CalDAVClient.create({
-//         baseUrl: process.env.CALDAV_BASE_URL!,
-//         username: "invalid",
-//         password: "invalid",
-//       })
-//     ).rejects.toThrow(
-//       "Invalid credentials: Unable to authenticate with the server."
-//     );
-//   });
-// });
+  test("Invalid credentials throw an error", async () => {
+    await expect(
+      CalDAVClient.create({
+        baseUrl: process.env.CALDAV_BASE_URL!,
+        username: "invalid",
+        password: "invalid",
+      })
+    ).rejects.toThrow(
+      "Invalid credentials: Unable to authenticate with the server."
+    );
+  });
+});
 
 describe("CalDAVClient Calendar Operations", () => {
   let client: CalDAVClient;
