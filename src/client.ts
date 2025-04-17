@@ -1,5 +1,11 @@
 import axios, { AxiosInstance } from "axios";
-import { CalDAVOptions, Calendar, Event } from "./models";
+import {
+  CalDAVOptions,
+  Calendar,
+  Event,
+  EventRef,
+  SyncChangesResult,
+} from "./models";
 import { encode } from "base-64";
 import { parseCalendars, parseEvents } from "./utils/parser";
 import { XMLParser } from "fast-xml-parser";
@@ -11,6 +17,7 @@ type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 export class CalDAVClient {
   private httpClient: AxiosInstance;
+  private prodId: string;
   public calendarHome: string | null;
   public userPrincipal: string | null;
   public requestTimeout: number;
@@ -26,6 +33,7 @@ export class CalDAVClient {
       },
       timeout: options.requestTimeout || 5000,
     });
+    this.prodId = options.prodId || "-//ts-dav.//CalDAV Client//EN";
     this.calendarHome = null;
     this.userPrincipal = null;
     this.requestTimeout = options.requestTimeout || 5000;
@@ -215,7 +223,7 @@ export class CalDAVClient {
 
     const vevent = `
       BEGIN:VCALENDAR
-      PRODID:-//ts-dav.//CalDAV Client//EN
+      PRODID:${this.prodId}
       VERSION:2.0
       BEGIN:VEVENT
       UID:${eventUid}
@@ -267,5 +275,153 @@ export class CalDAVClient {
     } catch (error) {
       throw new Error(`Failed to delete event: ${error}`);
     }
+  }
+
+  public async getCtag(calendarUrl: string): Promise<string> {
+    const requestBody = `
+      <d:propfind xmlns:d="DAV:" xmlns:cs="http://calendarserver.org/ns/">
+        <d:prop>
+          <cs:getctag />
+        </d:prop>
+      </d:propfind>`;
+
+    const response = await this.httpClient.request({
+      method: "PROPFIND",
+      url: calendarUrl,
+      data: requestBody,
+      headers: {
+        Depth: "0",
+      },
+      validateStatus: (status) => status === 207,
+    });
+
+    const parser = new XMLParser({ removeNSPrefix: true });
+    const jsonData = parser.parse(response.data);
+    return jsonData["multistatus"]["response"]["propstat"]["prop"]["getctag"];
+  }
+
+  private async getEventRefs(calendarUrl: string): Promise<EventRef[]> {
+    const requestBody = `
+      <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:prop>
+            <d:getetag />
+        </d:prop>
+        <c:filter>
+            <c:comp-filter name="VCALENDAR">
+                <c:comp-filter name="VEVENT" />
+            </c:comp-filter>
+        </c:filter>
+    </c:calendar-query>`;
+
+    const response = await this.httpClient.request({
+      method: "REPORT",
+      url: calendarUrl,
+      data: requestBody,
+      headers: {
+        Depth: "1",
+      },
+      validateStatus: (status) => status === 207,
+    });
+
+    const parser = new XMLParser({ removeNSPrefix: true });
+    const jsonData = parser.parse(response.data);
+    const refs: EventRef[] = [];
+    const responses = jsonData["multistatus"]["response"];
+    if (!responses || !Array.isArray(responses)) {
+      return refs;
+    }
+
+    for (const obj of responses) {
+      const href = obj["href"];
+      const etag = obj["propstat"]["prop"]["getetag"];
+      if (href && etag) {
+        refs.push({
+          href,
+          etag,
+        });
+      }
+    }
+    return refs;
+  }
+
+  public async getEventsByHref(
+    calendarUrl: string,
+    hrefs: string[]
+  ): Promise<Event[]> {
+    if (!hrefs.length) {
+      return [];
+    }
+
+    const requestBody = `
+      <c:calendar-multiget xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:prop>
+            <d:getetag />
+            <c:calendar-data />
+        </d:prop>
+        ${hrefs.map((href) => `<d:href>${href}</d:href>`).join("")}
+      </c:calendar-multiget>`;
+
+    const response = await this.httpClient.request({
+      method: "REPORT",
+      url: calendarUrl,
+      data: requestBody,
+      headers: {
+        Depth: "1",
+      },
+      validateStatus: (status) => status === 207,
+    });
+
+    return parseEvents(response.data);
+  }
+
+  public async syncChanges(
+    calendarUrl: string,
+    ctag: string,
+    localEvents: EventRef[]
+  ): Promise<SyncChangesResult> {
+    const remoteCtag = await this.getCtag(calendarUrl);
+
+    if (!ctag || ctag === remoteCtag) {
+      return {
+        changed: false,
+        newCtag: remoteCtag,
+        newEvents: [],
+        updatedEvents: [],
+        deletedEvents: [],
+      };
+    }
+
+    const remoteRefs = await this.getEventRefs(calendarUrl);
+
+    const localMap = new Map(localEvents.map((e) => [e.href, e.etag]));
+    const remoteMap = new Map(remoteRefs.map((e) => [e.href, e.etag]));
+
+    const newEvents: string[] = [];
+    const updatedEvents: string[] = [];
+    const deletedEvents: string[] = [];
+
+    // Identify new and updated
+    for (const { href, etag } of remoteRefs) {
+      if (!localMap.has(href)) {
+        newEvents.push(href);
+      } else if (localMap.get(href) !== etag) {
+        updatedEvents.push(href);
+      }
+    }
+
+    // Identify deleted
+    for (const { href } of localEvents) {
+      if (!remoteMap.has(href)) {
+        deletedEvents.push(href);
+      }
+    }
+
+    return {
+      changed: true,
+      newCtag: remoteCtag,
+      newEvents,
+      updatedEvents,
+      deletedEvents,
+    };
   }
 }

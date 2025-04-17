@@ -4,6 +4,7 @@ export interface CalDAVOptions {
   password: string;
   requestTimeout?: number;
   logRequests?: boolean;
+  prodId?: string;
 }
 
 type SupportedComponent =
@@ -13,10 +14,23 @@ type SupportedComponent =
   | "VFREEBUSY"
   | "VTIMEZONE";
 
+export interface EventRef {
+  href: string;
+  etag: string;
+}
+
+export interface SyncChangesResult {
+  changed: boolean;
+  newCtag: string;
+  newEvents: string[];
+  updatedEvents: string[];
+  deletedEvents: string[];
+}
+
 export interface Calendar {
   displayName: string;
   url: string;
-  ctag: string;
+  ctag?: string;
   supportedComponents: SupportedComponent[];
 }
 
@@ -27,6 +41,7 @@ export interface Event {
   end: Date;
   description?: string;
   location?: string;
+  etag?: string;
 }
 
 export type CalDAVResponse<T> = {

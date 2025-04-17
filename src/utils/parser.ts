@@ -71,7 +71,6 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
       }
 
       const icalEvent = new ICAL.Event(vevent);
-
       events.push({
         uid: icalEvent.uid,
         summary: icalEvent.summary || "Untitled Event",
@@ -81,6 +80,7 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
           : icalEvent.startDate.toJSDate(),
         description: icalEvent.description || "",
         location: icalEvent.location || "",
+        etag: eventData["getetag"] || "",
       });
     } catch (error) {
       console.error("Error parsing event data:", error);
