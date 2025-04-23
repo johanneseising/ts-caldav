@@ -9,7 +9,7 @@ import {
 import { encode } from "base-64";
 import { parseCalendars, parseEvents } from "./utils/parser";
 import { XMLParser } from "fast-xml-parser";
-import { formatDate } from "./utils/encode";
+import { formatDate, formatDateOnly } from "./utils/encode";
 import { v4 as uuidv4 } from "uuid";
 
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
@@ -226,6 +226,15 @@ export class CalDAVClient {
 
     const eventUid = eventData.uid || uuidv4();
     const href = `${calendarUrl}/${eventUid}.ics`;
+    const isWholeDay = eventData.wholeDay === true;
+
+    const dtStart = isWholeDay
+      ? `DTSTART;VALUE=DATE:${formatDateOnly(eventData.start)}`
+      : `DTSTART:${formatDate(eventData.start)}`;
+
+    const dtEnd = isWholeDay
+      ? `DTEND;VALUE=DATE:${formatDateOnly(eventData.end)}`
+      : `DTEND:${formatDate(eventData.end)}`;
 
     const vevent = `
       BEGIN:VCALENDAR
@@ -234,8 +243,8 @@ export class CalDAVClient {
       BEGIN:VEVENT
       UID:${eventUid}
       DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
-      DTSTART:${formatDate(eventData.start)}
-      DTEND:${formatDate(eventData.end)}
+      ${dtStart}
+      ${dtEnd}
       SUMMARY:${eventData.summary}
       DESCRIPTION:${eventData.description || ""}
       LOCATION:${eventData.location || ""}
@@ -252,9 +261,8 @@ export class CalDAVClient {
         validateStatus: (status) => status === 201 || status === 204,
       });
 
-      const etag = response.headers["etag"] || ""; // servers usually return it here
+      const etag = response.headers["etag"] || "";
 
-      // Fetch updated ctag
       const newCtag = await this.getCtag(calendarUrl);
 
       return {

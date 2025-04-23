@@ -43,6 +43,7 @@ export interface Event {
   location?: string;
   etag: string;
   href: string;
+  wholeDay?: boolean;
 }
 
 export type CalDAVResponse<T> = {

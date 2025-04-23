@@ -71,17 +71,25 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
       }
 
       const icalEvent = new ICAL.Event(vevent);
+      const isWholeDay = icalEvent.startDate.isDate;
+      const endDate = icalEvent.endDate
+        ? icalEvent.endDate.toJSDate()
+        : icalEvent.startDate.toJSDate();
+
+      const adjustedEnd = isWholeDay
+        ? new Date(endDate.getTime() - 86400000)
+        : endDate;
+
       events.push({
         uid: icalEvent.uid,
         summary: icalEvent.summary || "Untitled Event",
         start: icalEvent.startDate.toJSDate(),
-        end: icalEvent.endDate
-          ? icalEvent.endDate.toJSDate()
-          : icalEvent.startDate.toJSDate(),
-        description: icalEvent.description || "",
-        location: icalEvent.location || "",
+        end: adjustedEnd,
+        description: icalEvent.description,
+        location: icalEvent.location,
         etag: eventData["getetag"] || "",
         href: obj["href"],
+        wholeDay: isWholeDay,
       });
     } catch (error) {
       console.error("Error parsing event data:", error);
