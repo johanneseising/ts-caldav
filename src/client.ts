@@ -21,14 +21,18 @@ export class CalDAVClient {
   public calendarHome: string | null;
   public userPrincipal: string | null;
   public requestTimeout: number;
+  public baseUrl: string;
 
   private constructor(private options: CalDAVOptions) {
     this.httpClient = axios.create({
       baseURL: options.baseUrl,
       headers: {
-        Authorization: `Basic ${encode(
-          `${options.username}:${options.password}`
-        )}`,
+        Authorization:
+          options.auth.type === "basic"
+            ? `Basic ${encode(
+                `${options.auth.username}:${options.auth.password}`
+              )}`
+            : `Bearer ${options.auth.accessToken}`,
         "Content-Type": "application/xml; charset=utf-8",
       },
       timeout: options.requestTimeout || 5000,
@@ -37,7 +41,7 @@ export class CalDAVClient {
     this.calendarHome = null;
     this.userPrincipal = null;
     this.requestTimeout = options.requestTimeout || 5000;
-
+    this.baseUrl = options.baseUrl;
     if (options.logRequests) {
       this.httpClient.interceptors.request.use((request) => {
         console.log("Request:", request.method, request.url);
@@ -96,10 +100,17 @@ export class CalDAVClient {
         removeNSPrefix: true,
       });
       const jsonData = parser.parse(response.data, {});
-      this.userPrincipal =
+      let principal =
         jsonData["multistatus"]["response"]["propstat"]["prop"][
           "current-user-principal"
         ]["href"];
+
+      //Check if the provider is Google Calendar
+      if (this.baseUrl.includes("apidata.googleusercontent.com")) {
+        principal = principal.replace(/\/caldav\/v2\//, "/");
+      }
+
+      this.userPrincipal = principal;
     } catch (error) {
       throw new Error(
         "Invalid credentials: Unable to authenticate with the server." + error
@@ -128,11 +139,15 @@ export class CalDAVClient {
     const parser = new XMLParser({ removeNSPrefix: true });
     const jsonData = parser.parse(response.data);
 
-    this.calendarHome =
+    let calendarHome =
       jsonData["multistatus"]["response"]["propstat"]["prop"][
         "calendar-home-set"
       ]["href"];
 
+    if (this.baseUrl.includes("apidata.googleusercontent.com")) {
+      calendarHome = calendarHome.replace(/\/caldav\/v2\//, "/");
+    }
+    this.calendarHome = calendarHome;
     return this.calendarHome;
   }
 
@@ -225,9 +240,12 @@ export class CalDAVClient {
     }
 
     const eventUid = eventData.uid || uuidv4();
+    //Remove trailing slash from calendarUrl
+    if (calendarUrl.endsWith("/")) {
+      calendarUrl = calendarUrl.slice(0, -1);
+    }
     const href = `${calendarUrl}/${eventUid}.ics`;
     const isWholeDay = eventData.wholeDay === true;
-
     const dtStart = isWholeDay
       ? `DTSTART;VALUE=DATE:${formatDateOnly(eventData.start)}`
       : `DTSTART:${formatDate(eventData.start)}`;
@@ -291,6 +309,9 @@ export class CalDAVClient {
     calendarUrl: string,
     eventUid: string
   ): Promise<void> {
+    if (calendarUrl.endsWith("/")) {
+      calendarUrl = calendarUrl.slice(0, -1);
+    }
     try {
       await this.httpClient.delete(`${calendarUrl}/${eventUid}.ics`, {
         headers: {

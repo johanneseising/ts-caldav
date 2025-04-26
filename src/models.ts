@@ -1,11 +1,14 @@
 export interface CalDAVOptions {
   baseUrl: string;
-  username: string;
-  password: string;
+  auth: AuthOptions;
   requestTimeout?: number;
   logRequests?: boolean;
   prodId?: string;
 }
+
+export type AuthOptions =
+  | { type: "basic"; username: string; password: string }
+  | { type: "oauth"; accessToken: string };
 
 type SupportedComponent =
   | "VEVENT"

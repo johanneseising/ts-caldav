@@ -8,18 +8,35 @@ describe("CalDAVClient Credential Validation", () => {
     expect(
       await CalDAVClient.create({
         baseUrl: process.env.CALDAV_BASE_URL!,
-        username: process.env.CALDAV_USERNAME!,
-        password: process.env.CALDAV_PASSWORD!,
+        auth: {
+          type: "basic",
+          username: process.env.CALDAV_USERNAME!,
+          password: process.env.CALDAV_PASSWORD!,
+        },
       })
     ).toBeInstanceOf(CalDAVClient);
   });
 
+  test("Oauth credentials initialize the client successfully", async () => {
+    expect(
+      await CalDAVClient.create({
+        baseUrl: "https://apidata.googleusercontent.com/caldav/v2/",
+        auth: {
+          type: "oauth",
+          accessToken: process.env.ACCESS_TOKEN!,
+        },
+      })
+    ).toBeInstanceOf(CalDAVClient);
+  });
   test("Invalid credentials throw an error", async () => {
     await expect(
       CalDAVClient.create({
         baseUrl: process.env.CALDAV_BASE_URL!,
-        username: "invalid",
-        password: "invalid",
+        auth: {
+          type: "basic",
+          username: "invalid_username",
+          password: "invalid_password",
+        },
       })
     ).rejects.toThrow(
       "Invalid credentials: Unable to authenticate with the server."
@@ -35,8 +52,11 @@ describe("CalDAVClient Calendar Operations", () => {
   beforeAll(async () => {
     client = await CalDAVClient.create({
       baseUrl: process.env.CALDAV_BASE_URL!,
-      username: process.env.CALDAV_USERNAME!,
-      password: process.env.CALDAV_PASSWORD!,
+      auth: {
+        type: "basic",
+        username: process.env.CALDAV_USERNAME!,
+        password: process.env.CALDAV_PASSWORD!,
+      },
     });
   });
 

@@ -34,8 +34,11 @@ import { CalDAVClient } from "ts-caldav";
 
 const client = await CalDAVClient.create({
   baseUrl: "https://caldav.example.com",
-  username: "myuser",
-  password: "mypassword",
+  auth: {
+    type: "basic",
+    username: "myuser",
+    password: "mypassword",
+  }
 });
 
 // List calendars
@@ -44,6 +47,21 @@ const calendars = await client.getCalendars();
 // Fetch events
 const events = await client.getEvents(calendars[0].url);
 ```
+
+---
+
+## 🌍 Known Working CalDAV Servers
+
+Here are some server endpoints that **ts-caldav** has been tested with:
+
+| Provider      | Endpoint Example |
+|:--------------|:------------------|
+| **Google**    | `https://apidata.googleusercontent.com/caldav/v2/` |
+| **iCloud**    | `https://caldav.icloud.com/` |
+| **Yahoo**     | `https://caldav.calendar.yahoo.com` |
+| **GMX**       | `https://caldav.gmx.net` |
+
+> 💡 **Note:** Some servers may require enabling CalDAV support or generating app-specific passwords (especially iCloud and Fastmail).
 
 ---
 
@@ -56,8 +74,11 @@ Creates and validates a new CalDAV client instance.
 ```ts
 const client = await CalDAVClient.create({
   baseUrl: "https://caldav.example.com",
-  username: "john",
-  password: "secret",
+  auth: {
+    type: "basic",
+    username: "john",
+    password: "secret",
+  }
   logRequests: true,
 });
 ```
@@ -125,21 +146,9 @@ Fetches full `.ics` data for the given event hrefs.
 
 ---
 
-## 🧱 Types
-
-The library exposes strong TypeScript types:
-
-- `Calendar`
-- `Event`
-- `EventRef`
-- `CalDAVOptions`
-- `SyncChangesResult`
-
----
-
 ## 🔐 Auth Notes
 
-- Uses **Basic Auth** (RFC 7617)
+- Uses **Basic Auth** (RFC 7617) and OAuth
 - Works with most CalDAV servers: Google, iCloud, Fastmail, Nextcloud, Radicale
 
 ---
