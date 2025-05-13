@@ -377,7 +377,10 @@ export class CalDAVClient {
     const parser = new XMLParser({ removeNSPrefix: true });
     const jsonData = parser.parse(response.data);
     const refs: EventRef[] = [];
-    const responses = jsonData["multistatus"]["response"];
+    const responses = Array.isArray(jsonData["multistatus"]["response"])
+      ? jsonData["multistatus"]["response"]
+      : [jsonData["multistatus"]["response"]];
+
     if (!responses || !Array.isArray(responses)) {
       return refs;
     }
