@@ -9,7 +9,11 @@ import {
 import { encode } from "base-64";
 import { parseCalendars, parseEvents } from "./utils/parser";
 import { XMLParser } from "fast-xml-parser";
-import { formatDate, formatDateOnly } from "./utils/encode";
+import {
+  formatDate,
+  formatDateOnly,
+  normalizeCalendarUrl,
+} from "./utils/encode";
 import { v4 as uuidv4 } from "uuid";
 
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
@@ -379,12 +383,12 @@ export class CalDAVClient {
     }
 
     for (const obj of responses) {
-      const href = obj["href"];
-      const etag = obj["propstat"]["prop"]["getetag"];
-      if (href && etag) {
+      const resultHref = obj["href"];
+      const resultEtag = obj["propstat"]["prop"]["getetag"];
+      if (resultHref && resultEtag) {
         refs.push({
-          href,
-          etag,
+          href: normalizeCalendarUrl(resultHref),
+          etag: resultEtag,
         });
       }
     }

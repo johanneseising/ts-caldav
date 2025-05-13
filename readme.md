@@ -78,7 +78,7 @@ const client = await CalDAVClient.create({
     type: "basic",
     username: "john",
     password: "secret",
-  }
+  },
   logRequests: true,
 });
 ```
