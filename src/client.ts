@@ -377,17 +377,22 @@ export class CalDAVClient {
     const parser = new XMLParser({ removeNSPrefix: true });
     const jsonData = parser.parse(response.data);
     const refs: EventRef[] = [];
-    const responses = Array.isArray(jsonData["multistatus"]["response"])
-      ? jsonData["multistatus"]["response"]
-      : [jsonData["multistatus"]["response"]];
+    const rawResponses = jsonData?.multistatus?.response;
 
-    if (!responses || !Array.isArray(responses)) {
-      return refs;
+    if (!rawResponses) {
+      return [];
     }
 
+    const responses = Array.isArray(rawResponses)
+      ? rawResponses
+      : [rawResponses];
+
     for (const obj of responses) {
+      if (!obj || typeof obj !== "object") continue;
+
       const resultHref = obj["href"];
-      const resultEtag = obj["propstat"]["prop"]["getetag"];
+      const resultEtag = obj?.propstat?.prop?.getetag;
+
       if (resultHref && resultEtag) {
         refs.push({
           href: normalizeCalendarUrl(resultHref),
@@ -395,6 +400,7 @@ export class CalDAVClient {
         });
       }
     }
+
     return refs;
   }
 
