@@ -68,7 +68,6 @@ export class CalDAVClient {
     const client = new CalDAVClient(options);
     const isGoogle = options.baseUrl.includes("apidata.googleusercontent.com");
     const discoveryPath = isGoogle ? `/caldav/v2/` : "/";
-    console.log(discoveryPath);
     await client.validateCredentials(discoveryPath);
     await client.fetchCalendarHome();
     return client;
