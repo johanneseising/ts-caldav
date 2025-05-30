@@ -56,7 +56,7 @@ Here are some server endpoints that **ts-caldav** has been tested with:
 
 | Provider      | Endpoint Example |
 |:--------------|:------------------|
-| **Google**    | `https://apidata.googleusercontent.com/caldav/v2/` |
+| **Google**    | `https://apidata.googleusercontent.com/` |
 | **iCloud**    | `https://caldav.icloud.com/` |
 | **Yahoo**     | `https://caldav.calendar.yahoo.com` |
 | **GMX**       | `https://caldav.gmx.net` |

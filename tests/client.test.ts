@@ -20,7 +20,7 @@ describe("CalDAVClient Credential Validation", () => {
   test("Oauth credentials initialize the client successfully", async () => {
     expect(
       await CalDAVClient.create({
-        baseUrl: "https://apidata.googleusercontent.com/caldav/v2/",
+        baseUrl: "https://apidata.googleusercontent.com/",
         auth: {
           type: "oauth",
           accessToken: process.env.ACCESS_TOKEN!,

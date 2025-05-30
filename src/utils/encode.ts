@@ -15,10 +15,3 @@ export const formatDate = (date: Date): string => {
 export const formatDateOnly = (date: Date): string => {
   return date.toISOString().split("T")[0].replace(/-/g, "");
 };
-
-export const normalizeCalendarUrl = (url: string) => {
-  if (url.startsWith("/caldav/v2/")) {
-    return url.slice("/caldav/v2".length);
-  }
-  return url;
-};

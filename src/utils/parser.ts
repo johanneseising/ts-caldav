@@ -1,7 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { Calendar, Event } from "../models";
 import ICAL from "ical.js";
-import { normalizeCalendarUrl } from "./encode";
 
 export const parseCalendars = async (
   responseData: string
@@ -20,7 +19,7 @@ export const parseCalendars = async (
         displayName: calendarData["displayname"]
           ? calendarData["displayname"]
           : "",
-        url: normalizeCalendarUrl(obj["href"]),
+        url: obj["href"],
         ctag: calendarData["getctag"],
         supportedComponents: calendarData["supported-calendar-component-set"][
           "comp"
@@ -89,7 +88,7 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
         description: icalEvent.description,
         location: icalEvent.location,
         etag: eventData["getetag"] || "",
-        href: normalizeCalendarUrl(obj["href"]),
+        href: obj["href"],
         wholeDay: isWholeDay,
       });
     } catch (error) {

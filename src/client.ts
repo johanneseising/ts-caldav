@@ -9,11 +9,7 @@ import {
 import { encode } from "base-64";
 import { parseCalendars, parseEvents } from "./utils/parser";
 import { XMLParser } from "fast-xml-parser";
-import {
-  formatDate,
-  formatDateOnly,
-  normalizeCalendarUrl,
-} from "./utils/encode";
+import { formatDate, formatDateOnly } from "./utils/encode";
 import { v4 as uuidv4 } from "uuid";
 
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
@@ -70,12 +66,15 @@ export class CalDAVClient {
    */
   static async create(options: CalDAVOptions): Promise<CalDAVClient> {
     const client = new CalDAVClient(options);
-    await client.validateCredentials();
+    const isGoogle = options.baseUrl.includes("apidata.googleusercontent.com");
+    const discoveryPath = isGoogle ? `/caldav/v2/` : "/";
+    console.log(discoveryPath);
+    await client.validateCredentials(discoveryPath);
     await client.fetchCalendarHome();
     return client;
   }
 
-  private async validateCredentials(): Promise<void> {
+  private async validateCredentials(discoveryPath: string): Promise<void> {
     const requestBody = `
         <d:propfind xmlns:d="DAV:">
         <d:prop>
@@ -86,7 +85,7 @@ export class CalDAVClient {
     try {
       const response = await this.httpClient.request({
         method: "PROPFIND",
-        url: "/",
+        url: discoveryPath,
         data: requestBody,
         headers: {
           Depth: "0",
@@ -104,17 +103,11 @@ export class CalDAVClient {
         removeNSPrefix: true,
       });
       const jsonData = parser.parse(response.data, {});
-      let principal =
+
+      this.userPrincipal =
         jsonData["multistatus"]["response"]["propstat"]["prop"][
           "current-user-principal"
         ]["href"];
-
-      //Check if the provider is Google Calendar
-      if (this.baseUrl.includes("apidata.googleusercontent.com")) {
-        principal = principal.replace(/\/caldav\/v2\//, "/");
-      }
-
-      this.userPrincipal = principal;
     } catch (error) {
       throw new Error(
         "Invalid credentials: Unable to authenticate with the server." + error
@@ -143,15 +136,10 @@ export class CalDAVClient {
     const parser = new XMLParser({ removeNSPrefix: true });
     const jsonData = parser.parse(response.data);
 
-    let calendarHome =
+    this.calendarHome =
       jsonData["multistatus"]["response"]["propstat"]["prop"][
         "calendar-home-set"
       ]["href"];
-
-    if (this.baseUrl.includes("apidata.googleusercontent.com")) {
-      calendarHome = calendarHome.replace(/\/caldav\/v2\//, "/");
-    }
-    this.calendarHome = calendarHome;
     return this.calendarHome;
   }
 
@@ -395,7 +383,7 @@ export class CalDAVClient {
 
       if (resultHref && resultEtag) {
         refs.push({
-          href: normalizeCalendarUrl(resultHref),
+          href: resultHref,
           etag: resultEtag,
         });
       }
