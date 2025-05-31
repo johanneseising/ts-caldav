@@ -236,14 +236,15 @@ export class CalDAVClient {
       calendarUrl = calendarUrl.slice(0, -1);
     }
     const href = `${calendarUrl}/${eventUid}.ics`;
-    const isWholeDay = eventData.wholeDay === true;
-    const dtStart = isWholeDay
-      ? `DTSTART;VALUE=DATE:${formatDateOnly(eventData.start)}`
-      : `DTSTART:${formatDate(eventData.start)}`;
+    const dtStart =
+      eventData.wholeDay === true
+        ? `DTSTART;VALUE=DATE:${formatDateOnly(eventData.start)}`
+        : `DTSTART:${formatDate(eventData.start)}`;
 
-    const dtEnd = isWholeDay
-      ? `DTEND;VALUE=DATE:${formatDateOnly(eventData.end)}`
-      : `DTEND:${formatDate(eventData.end)}`;
+    const dtEnd =
+      eventData.wholeDay === true
+        ? `DTEND;VALUE=DATE:${formatDateOnly(eventData.end)}`
+        : `DTEND:${formatDate(eventData.end)}`;
 
     const vevent = `
       BEGIN:VCALENDAR
@@ -295,18 +296,23 @@ export class CalDAVClient {
    * Deletes an event from the specified calendar.
    * @param calendarUrl - The URL of the calendar to delete the event from.
    * @param eventUid - The UID of the event to delete.
+   * @param etag - Optional ETag for strict deletion (required by some providers like iCloud).
    */
   public async deleteEvent(
     calendarUrl: string,
-    eventUid: string
+    eventUid: string,
+    etag?: string
   ): Promise<void> {
     if (calendarUrl.endsWith("/")) {
       calendarUrl = calendarUrl.slice(0, -1);
     }
+
+    const href = `${calendarUrl}/${eventUid}.ics`;
+
     try {
-      await this.httpClient.delete(`${calendarUrl}/${eventUid}.ics`, {
+      await this.httpClient.delete(href, {
         headers: {
-          "If-Match": "*",
+          "If-Match": etag ?? "*", // Use specific ETag if provided; fallback to "*"
         },
         validateStatus: (status) => status === 204,
       });
@@ -399,13 +405,19 @@ export class CalDAVClient {
       return [];
     }
 
+    const filteredHrefs = hrefs.filter((href) => href.endsWith(".ics"));
+
+    if (filteredHrefs.length === 0) {
+      return [];
+    }
+
     const requestBody = `
       <c:calendar-multiget xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
         <d:prop>
             <d:getetag />
             <c:calendar-data />
         </d:prop>
-        ${hrefs.map((href) => `<d:href>${href}</d:href>`).join("")}
+        ${filteredHrefs.map((href) => `<d:href>${href}</d:href>`).join("")}
       </c:calendar-multiget>`;
 
     const response = await this.httpClient.request({

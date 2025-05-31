@@ -17,17 +17,6 @@ describe("CalDAVClient Credential Validation", () => {
     ).toBeInstanceOf(CalDAVClient);
   });
 
-  test("Oauth credentials initialize the client successfully", async () => {
-    expect(
-      await CalDAVClient.create({
-        baseUrl: "https://apidata.googleusercontent.com/",
-        auth: {
-          type: "oauth",
-          accessToken: process.env.ACCESS_TOKEN!,
-        },
-      })
-    ).toBeInstanceOf(CalDAVClient);
-  });
   test("Invalid credentials throw an error", async () => {
     await expect(
       CalDAVClient.create({

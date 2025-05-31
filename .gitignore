@@ -38,3 +38,6 @@ tsconfig.tsbuildinfo
 .idea
 .fleet
 .vscode
+
+tests/icloud.test.ts
+tests/googleSync.test.TS
