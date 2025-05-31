@@ -10,9 +10,8 @@ describe("Google CalDAV Sync Tests (OAuth)", () => {
   let originalCtag: string;
 
   beforeAll(async () => {
-    // Create client using OAuth token
     client = await CalDAVClient.create({
-      baseUrl: "https://apidata.googleusercontent.com/", // important: no /caldav/v2/
+      baseUrl: "https://apidata.googleusercontent.com/",
       auth: {
         type: "oauth",
         accessToken: process.env.ACCESS_TOKEN!,
@@ -22,7 +21,6 @@ describe("Google CalDAV Sync Tests (OAuth)", () => {
     const calendars = await client.getCalendars();
     calendarUrl = calendars[0].url;
 
-    // Capture original ctag for sync test
     originalCtag = await client.getCtag(calendarUrl);
   });
 

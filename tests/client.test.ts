@@ -129,7 +129,7 @@ describe("CalDAVClient Calendar Operations", () => {
       location: "Test Location",
       description: "This is a test event.",
     });
-    eventUid = res.uid; // Store the UID for later use
+    eventUid = res.uid;
     expect(res).toBeDefined();
   });
 
