@@ -174,13 +174,29 @@ export class CalDAVClient {
     return parseCalendars(response.data);
   }
 
+  private formatDate(date: Date): string {
+    return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  }
+
   /**
    * Retrieves events from the specified calendar.
    * @param calendarUrl - The URL of the calendar to retrieve events from.
+   * @param options - Optional time range filter.
+   *   @param options.start - Start of the time range (inclusive).
+   *   @param options.end - End of the time range (exclusive).
    * @returns An array of events.
    * @throws An error if the request fails.
    */
-  public async getEvents(calendarUrl: string): Promise<Event[]> {
+  public async getEvents(calendarUrl: string, options?: { start?: Date; end?: Date }): Promise<Event[]> {
+    const { start, end } = options || {};
+
+    const timeRangeFilter =
+      start && end
+        ? `<c:comp-filter name="VEVENT">
+           <c:time-range start="${this.formatDate(start)}" end="${this.formatDate(end)}" />
+         </c:comp-filter>`
+        : `<c:comp-filter name="VEVENT" />`;
+
     const requestBody = `
       <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
         <d:prop>
@@ -188,7 +204,9 @@ export class CalDAVClient {
             <c:calendar-data />
         </d:prop>
         <c:filter>
-            <c:comp-filter name="VCALENDAR" />
+            <c:comp-filter name="VCALENDAR">
+            ${timeRangeFilter}
+            <c:comp-filter/>
         </c:filter>
       </c:calendar-query>`;
 
