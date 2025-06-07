@@ -1,23 +1,23 @@
-# 📅 ts-caldav
+# ts-caldav
 
 > A lightweight, promise-based TypeScript CalDAV client for syncing calendar data in browser, Node.js, or React Native environments.
 
-**ts-caldav** helps you interact with CalDAV servers — allowing you to fetch calendars, manage events, and synchronize changes with minimal effort. Great for building calendar apps or integrations.
+**ts-caldav** helps you interact with CalDAV servers — allowing you to fetch calendars, manage events (including recurring events), and synchronize changes with minimal effort. Great for building calendar apps or integrations.
 
 ---
 
-## ✨ Features
+## Features
 
-- 🔐 Credential validation with CalDAV servers
-- 🗂 Fetch calendar homes and individual calendars
-- 📆 List, create, and delete events
-- ♻️ Detect event changes using `getctag` and `etag`
-- ⚡ Efficient sync with diff-based event updates
-- 📦 Built for TypeScript, with full type safety
+- Credential validation with CalDAV servers
+- Fetch calendar homes and individual calendars
+- List, create (including recurring), and delete events
+- Detect event changes using `getctag` and `etag`
+- Efficient sync with diff-based event updates
+- Built for TypeScript, with full type safety
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install ts-caldav
@@ -27,7 +27,7 @@ yarn add ts-caldav
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```ts
 import { CalDAVClient } from "ts-caldav";
@@ -50,7 +50,7 @@ const events = await client.getEvents(calendars[0].url);
 
 ---
 
-## 🌍 Known Working CalDAV Servers
+## Known Working CalDAV Servers
 
 Here are some server endpoints that **ts-caldav** has been tested with:
 
@@ -65,7 +65,7 @@ Here are some server endpoints that **ts-caldav** has been tested with:
 
 ---
 
-## 🛠 API Documentation
+## API Documentation
 
 ### `CalDAVClient.create(options)`
 
@@ -91,33 +91,42 @@ Returns an array of available calendars for the authenticated user.
 
 ---
 
-### `getEvents(calendarUrl: string): Promise<Event[]>`
+### `getEvents(calendarUrl: string, options?): Promise<Event[]>`
 
-Retrieves all events from a calendar.
-
----
-
-### `createEvent(calendarUrl, eventData)`
-
-Creates a new calendar event.
+Fetches events within a given time range (defaults to 3 weeks ahead if none provided).
 
 ```ts
-await client.createEvent(calendar.url, {
-  summary: "Team Meeting",
+const events = await client.getEvents(calendarUrl, {
   start: new Date(),
-  end: new Date(Date.now() + 3600000), // +1h
+  end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
 });
 ```
 
 ---
 
-### `deleteEvent(calendarUrl, eventUid)`
+### `createEvent(calendarUrl, eventData)`
 
-Deletes an event by UID.
+Creates a new calendar event. Supports full-day and recurring events.
 
 ```ts
-await client.deleteEvent(calendar.url, "abc123");
+await client.createEvent(calendar.url, {
+  summary: "Team Sync",
+  start: new Date(),
+  end: new Date(Date.now() + 3600000),
+  recurrenceRule: {
+    freq: "WEEKLY",
+    interval: 1,
+    byday: ["MO", "WE"],
+    until: new Date("2025-12-31")
+  }
+});
 ```
+
+---
+
+### `deleteEvent(calendarUrl, eventUid, etag?)`
+
+Deletes an event by UID. Optionally provide ETag for safe deletion.
 
 ---
 
@@ -125,35 +134,45 @@ await client.deleteEvent(calendar.url, "abc123");
 
 Compares remote calendar state to local references using `getctag` and `etag`.
 
-```ts
-const result = await client.syncChanges(
-  calendar.url,
-  lastKnownCtag,
-  [
-    { href: "/calendar/event1.ics", etag: "123abc" },
-    { href: "/calendar/event2.ics", etag: "456def" },
-  ]
-);
-
-// result: { newEvents, updatedEvents, deletedEvents, changed, newCtag }
-```
-
 ---
 
 ### `getEventsByHref(calendarUrl, hrefs: string[])`
 
-Fetches full `.ics` data for the given event hrefs.
+Fetches full `.ics` data for specific event hrefs.
 
 ---
 
-## 🔐 Auth Notes
+## Recurrence Support
 
-- Uses **Basic Auth** (RFC 7617) and OAuth
-- Works with most CalDAV servers: Google, iCloud, Fastmail, Nextcloud, Radicale
+Supports the following recurrence rule fields:
+
+- `freq`: "DAILY", "WEEKLY", "MONTHLY", "YEARLY"
+- `interval`: number of frequency intervals between occurrences
+- `count`: number of total occurrences
+- `until`: date until which the event recurs
+- `byday`, `bymonthday`, `bymonth`
+
+Example:
+
+```ts
+recurrenceRule: {
+  freq: "MONTHLY",
+  interval: 1,
+  byday: ["FR"],
+  until: new Date("2025-12-31"),
+}
+```
 
 ---
 
-## 📚 Example Use Case: Sync Local Calendar
+## Auth Notes
+
+- Supports Basic Auth and OAuth2
+- Compatible with most CalDAV servers: Google, iCloud, Fastmail, Nextcloud, Radicale
+
+---
+
+## Example Use Case: Sync Local Calendar
 
 ```ts
 const result = await client.syncChanges(calendar.url, lastCtag, localEventRefs);
@@ -171,14 +190,14 @@ if (result.changed) {
 
 ---
 
-## ⚠️ Limitations
+## Limitations
 
 - Does not support WebDAV `sync-token` (use `getctag` diffing instead)
-- Currently limited to `VEVENT` components
+- Limited to `VEVENT` components only
 
 ---
 
-## 🧪 Development
+## Development
 
 ```bash
 git clone https://github.com/yourname/ts-caldav.git
@@ -189,12 +208,21 @@ npm run build
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are very welcome! Take a look at [CONTRIBUTING](./contributing.md) to get started.
 
 ---
 
-## 📄 License
+---
+
+## Roadmap
+
+- [x] Basic CalDAV client with calendar and event support
+- [x] Recurring event support (RRULE)
+- [ ] Timezone-aware event parsing and creation
+- [ ] WebDAV sync-token support
+
+## License
 
 This project is licensed under the MIT License. See the [LICENSE](./license.txt) file for details.
