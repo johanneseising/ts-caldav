@@ -174,21 +174,49 @@ export class CalDAVClient {
     return parseCalendars(response.data);
   }
 
+  private formatDate(date: Date): string {
+    return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  }
+
   /**
    * Retrieves events from the specified calendar.
    * @param calendarUrl - The URL of the calendar to retrieve events from.
+   * @param options - Optional time range filter.
+   *   @param options.start - Start of the time range (inclusive).
+   *   @param options.end - End of the time range (exclusive).
    * @returns An array of events.
    * @throws An error if the request fails.
    */
-  public async getEvents(calendarUrl: string): Promise<Event[]> {
+  public async getEvents(calendarUrl: string, options?: { start?: Date; end?: Date }): Promise<Event[]> {
+    // use start and end from options if present, otherwise use today and today+3 weeks
+    const now = new Date();
+    const defaultEnd = new Date(now.getTime() + 3 * 7 * 24 * 60 * 60 * 1000); // 3 weeks from now
+    const { start = now, end = defaultEnd } = options || {};
+
+    const timeRangeFilter =
+      start && end
+        ? `<c:comp-filter name="VEVENT">
+             <c:time-range start="${this.formatDate(start)}" end="${this.formatDate(end)}" />
+           </c:comp-filter>`
+        : `<c:comp-filter name="VEVENT" />`;
+
+    const calendarData =
+      start && end 
+      ? ` <c:calendar-data>
+            <c:expand start="${this.formatDate(start)}" end="${this.formatDate(end)}"/>
+          </c:calendar-data>`
+      : `<c:calendar-data />`
+
     const requestBody = `
       <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
         <d:prop>
             <d:getetag />
-            <c:calendar-data />
+            ${calendarData}
         </d:prop>
         <c:filter>
-            <c:comp-filter name="VCALENDAR" />
+            <c:comp-filter name="VCALENDAR">
+            ${timeRangeFilter}
+            </c:comp-filter>
         </c:filter>
       </c:calendar-query>`;
 
@@ -230,6 +258,20 @@ export class CalDAVClient {
       throw new Error("Calendar URL is required to create an event.");
     }
 
+    const rrule = eventData.recurrenceRule
+      ? `RRULE:${[
+        eventData.recurrenceRule.freq ? `FREQ=${eventData.recurrenceRule.freq}` : null,
+        eventData.recurrenceRule.interval ? `INTERVAL=${eventData.recurrenceRule.interval}` : null,
+        eventData.recurrenceRule.count ? `COUNT=${eventData.recurrenceRule.count}` : null,
+        eventData.recurrenceRule.until ? `UNTIL=${formatDate(eventData.recurrenceRule.until)}` : null,
+        eventData.recurrenceRule.byday ? `BYDAY=${eventData.recurrenceRule.byday.join(",")}` : null,
+        eventData.recurrenceRule.bymonthday ? `BYMONTHDAY=${eventData.recurrenceRule.bymonthday.join(",")}` : null,
+        eventData.recurrenceRule.bymonth ? `BYMONTH=${eventData.recurrenceRule.bymonth.join(",")}` : null,
+      ]
+        .filter(Boolean)
+        .join(";")}`
+      : "";
+
     const eventUid = eventData.uid || uuidv4();
     //Remove trailing slash from calendarUrl
     if (calendarUrl.endsWith("/")) {
@@ -255,6 +297,7 @@ export class CalDAVClient {
       DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
       ${dtStart}
       ${dtEnd}
+      ${rrule}
       SUMMARY:${eventData.summary}
       DESCRIPTION:${eventData.description || ""}
       LOCATION:${eventData.location || ""}
