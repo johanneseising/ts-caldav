@@ -17,7 +17,7 @@ type SupportedComponent =
   | "VFREEBUSY"
   | "VTIMEZONE";
 
-type RecurrenceRule = {
+export type RecurrenceRule = {
   freq?: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
   interval?: number;
   count?: number;

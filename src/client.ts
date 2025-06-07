@@ -188,25 +188,36 @@ export class CalDAVClient {
    * @throws An error if the request fails.
    */
   public async getEvents(calendarUrl: string, options?: { start?: Date; end?: Date }): Promise<Event[]> {
-    const { start, end } = options || {};
+    // use start and end from options if present, otherwise use today and today+3 weeks
+    const { start, end } = options || {
+      start: new Date(),
+      end: new Date(new Date().getTime() + 3 * 7 * 24 * 60 * 60 * 1000),
+    };
 
     const timeRangeFilter =
       start && end
         ? `<c:comp-filter name="VEVENT">
-           <c:time-range start="${this.formatDate(start)}" end="${this.formatDate(end)}" />
-         </c:comp-filter>`
+             <c:time-range start="${this.formatDate(start)}" end="${this.formatDate(end)}" />
+           </c:comp-filter>`
         : `<c:comp-filter name="VEVENT" />`;
+
+    const calendarData =
+      start && end 
+      ? ` <c:calendar-data>
+            <c:expand start="${this.formatDate(start)}" end="${this.formatDate(end)}"/>
+          </c:calendar-data>`
+      : `<c:calendar-data />`
 
     const requestBody = `
       <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
         <d:prop>
             <d:getetag />
-            <c:calendar-data />
+            ${calendarData}
         </d:prop>
         <c:filter>
             <c:comp-filter name="VCALENDAR">
             ${timeRangeFilter}
-            <c:comp-filter/>
+            </c:comp-filter>
         </c:filter>
       </c:calendar-query>`;
 
