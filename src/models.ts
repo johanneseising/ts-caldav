@@ -17,6 +17,16 @@ type SupportedComponent =
   | "VFREEBUSY"
   | "VTIMEZONE";
 
+type RecurrenceRule = {
+  freq?: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+  interval?: number;
+  count?: number;
+  until?: Date;
+  byday?: string[];
+  bymonthday?: number[];
+  bymonth?: number[];
+};
+
 export interface EventRef {
   href: string;
   etag: string;
@@ -47,6 +57,7 @@ export interface Event {
   etag: string;
   href: string;
   wholeDay?: boolean;
+  recurrenceRule?: RecurrenceRule;
 }
 
 export type CalDAVResponse<T> = {

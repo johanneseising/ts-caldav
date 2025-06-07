@@ -248,6 +248,20 @@ export class CalDAVClient {
       throw new Error("Calendar URL is required to create an event.");
     }
 
+    const rrule = eventData.recurrenceRule
+      ? `RRULE:${[
+        eventData.recurrenceRule.freq ? `FREQ=${eventData.recurrenceRule.freq}` : null,
+        eventData.recurrenceRule.interval ? `INTERVAL=${eventData.recurrenceRule.interval}` : null,
+        eventData.recurrenceRule.count ? `COUNT=${eventData.recurrenceRule.count}` : null,
+        eventData.recurrenceRule.until ? `UNTIL=${formatDate(eventData.recurrenceRule.until)}` : null,
+        eventData.recurrenceRule.byday ? `BYDAY=${eventData.recurrenceRule.byday.join(",")}` : null,
+        eventData.recurrenceRule.bymonthday ? `BYMONTHDAY=${eventData.recurrenceRule.bymonthday.join(",")}` : null,
+        eventData.recurrenceRule.bymonth ? `BYMONTH=${eventData.recurrenceRule.bymonth.join(",")}` : null,
+      ]
+        .filter(Boolean)
+        .join(";")}`
+      : "";
+
     const eventUid = eventData.uid || uuidv4();
     //Remove trailing slash from calendarUrl
     if (calendarUrl.endsWith("/")) {
@@ -273,6 +287,7 @@ export class CalDAVClient {
       DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
       ${dtStart}
       ${dtEnd}
+      ${rrule}
       SUMMARY:${eventData.summary}
       DESCRIPTION:${eventData.description || ""}
       LOCATION:${eventData.location || ""}
