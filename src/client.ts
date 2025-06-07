@@ -189,10 +189,9 @@ export class CalDAVClient {
    */
   public async getEvents(calendarUrl: string, options?: { start?: Date; end?: Date }): Promise<Event[]> {
     // use start and end from options if present, otherwise use today and today+3 weeks
-    const { start, end } = options || {
-      start: new Date(),
-      end: new Date(new Date().getTime() + 3 * 7 * 24 * 60 * 60 * 1000),
-    };
+    const now = new Date();
+    const defaultEnd = new Date(now.getTime() + 3 * 7 * 24 * 60 * 60 * 1000); // 3 weeks from now
+    const { start = now, end = defaultEnd } = options || {};
 
     const timeRangeFilter =
       start && end
