@@ -63,14 +63,6 @@ describe("CalDAVClient Calendar Operations", () => {
     expect(calendars.length).toBeGreaterThan(0);
   });
 
-  test("Get events", async () => {
-    const calendars = await client.getCalendars();
-    const events = await client.getEvents(calendars[0].url);
-    expect(events).toBeDefined();
-    expect(events).toBeInstanceOf(Array);
-    expect(events.length).toBeGreaterThan(0);
-  });
-
   let eventUid: string;
 
   test("Create event", async () => {
@@ -86,6 +78,17 @@ describe("CalDAVClient Calendar Operations", () => {
     });
     eventUid = res.uid;
     expect(res).toBeDefined();
+  });
+
+  test("Get events", async () => {
+    const calendars = await client.getCalendars();
+    const events = await client.getEvents(calendars[0].url, {
+      start: new Date(new Date().getTime() - 24 * 60 * 60 * 1000), // 24 hours ago
+      end: new Date(new Date().getTime() + 24 * 60 * 60 * 1000), // 24 hours in the future
+    });
+    expect(events).toBeDefined();
+    expect(events).toBeInstanceOf(Array);
+    expect(events.length).toBeGreaterThan(0);
   });
 
   test("Duplicate event creation fails", async () => {
@@ -168,7 +171,10 @@ describe("CalDAVClient Calendar Operations", () => {
     });
     eventUid = res.uid; // Store the UID for later use
 
-    const events = await client.getEvents(calendars[0].url);
+    const events = await client.getEvents(calendars[0].url, {
+      start: new Date(new Date().getTime() - 24 * 60 * 60 * 1000), // 24 hours ago
+      end: new Date(new Date().getTime() + 24 * 60 * 60 * 1000), // 24 hours in the future
+    });
     const wholeDayEvent = events.find((event) => event.uid === eventUid);
     expect(wholeDayEvent).toBeDefined();
     expect(wholeDayEvent?.wholeDay).toBe(true);
@@ -187,5 +193,112 @@ describe("CalDAVClient Calendar Operations", () => {
     expect(events).toBeDefined();
     expect(events).toBeInstanceOf(Array);
     expect(events.length).toBeGreaterThan(0);
+  });
+});
+
+describe("Recurring Events", () => {
+  let client: CalDAVClient;
+  let calendarUrl: string;
+  let recurringEventUid: string;
+
+  beforeAll(async () => {
+    client = await CalDAVClient.create({
+      baseUrl: process.env.CALDAV_BASE_URL!,
+      auth: {
+        type: "basic",
+        username: process.env.CALDAV_USERNAME!,
+        password: process.env.CALDAV_PASSWORD!,
+      },
+    });
+
+    const calendars = await client.getCalendars();
+    calendarUrl = calendars[0].url;
+  });
+
+  test("Create a recurring event", async () => {
+    const now = new Date();
+    const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+
+    const res = await client.createEvent(calendarUrl, {
+      start: now,
+      end: inOneHour,
+      summary: "Weekly Standup",
+      description: "Recurring weekly team standup.",
+      location: "Online",
+      recurrenceRule: {
+        freq: "WEEKLY",
+        interval: 1,
+        count: 5,
+      },
+    });
+
+    recurringEventUid = res.uid;
+    expect(res).toBeDefined();
+    expect(res.uid).toBeTruthy();
+  });
+
+  test("Retrieve recurring event instances", async () => {
+    const events = await client.getEvents(calendarUrl, {
+      start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      end: new Date(Date.now() + 6 * 7 * 24 * 60 * 60 * 1000),
+    });
+
+    const event = events.find((e) => e.uid === recurringEventUid);
+
+    expect(event).toBeDefined();
+    expect(event?.recurrenceRule).toBeDefined();
+    expect(event?.recurrenceRule?.freq).toBe("WEEKLY");
+    expect(event?.recurrenceRule?.count).toBe(5);
+    expect(event?.recurrenceRule?.interval).toBe(1);
+  });
+
+  test("Clean up recurring event", async () => {
+    await client.deleteEvent(calendarUrl, recurringEventUid);
+  });
+
+  test("Create a recurring event by day", async () => {
+    const now = new Date();
+    const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+    const res = await client.createEvent(calendarUrl, {
+      start: now,
+      end: inOneHour,
+      summary: "Daily Standup",
+      description: "Recurring daily team standup.",
+      location: "Online",
+      recurrenceRule: {
+        byday: ["MO", "TU", "WE", "TH", "FR"],
+        freq: "DAILY",
+        interval: 1,
+        count: 10, // Adjust the count as needed
+      },
+    });
+
+    recurringEventUid = res.uid;
+    expect(res).toBeDefined();
+    expect(res.uid).toBeTruthy();
+  });
+
+  test("Retrieve daily recurring event instances", async () => {
+    const events = await client.getEvents(calendarUrl, {
+      start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      end: new Date(Date.now() + 6 * 7 * 24 * 60 * 60 * 1000),
+    });
+
+    const event = events.find((e) => e.uid === recurringEventUid);
+    expect(event).toBeDefined();
+    expect(event?.recurrenceRule).toBeDefined();
+    expect(event?.recurrenceRule?.freq).toBe("DAILY");
+    expect(event?.recurrenceRule?.byday).toEqual([
+      "MO",
+      "TU",
+      "WE",
+      "TH",
+      "FR",
+    ]);
+    expect(event?.recurrenceRule?.count).toBe(10);
+  });
+
+  test("Clean up daily recurring event", async () => {
+    await client.deleteEvent(calendarUrl, recurringEventUid);
   });
 });

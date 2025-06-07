@@ -1,6 +1,36 @@
 import { XMLParser } from "fast-xml-parser";
-import { Calendar, Event } from "../models";
+import { Calendar, Event, RecurrenceRule } from "../models";
 import ICAL from "ical.js";
+
+function parseRecurrence(recur: ICAL.Recur): RecurrenceRule {
+  const freqMap = {
+    DAILY: "DAILY",
+    WEEKLY: "WEEKLY",
+    MONTHLY: "MONTHLY",
+    YEARLY: "YEARLY",
+  } as const;
+  const freq = freqMap[recur.freq as keyof typeof freqMap] || undefined;
+
+  const byday = recur.parts.BYDAY
+    ? recur.parts.BYDAY.map((day: string) => day)
+    : undefined;
+  const bymonthday = recur.parts.BYMONTHDAY
+    ? recur.parts.BYMONTHDAY.map((day: number) => day)
+    : undefined;
+  const bymonth = recur.parts.BYMONTH
+    ? recur.parts.BYMONTH.map((month: number) => month)
+    : undefined;
+
+  return {
+    freq,
+    interval: recur.interval,
+    count: recur.count ? recur.count : undefined,
+    until: recur.until ? recur.until.toJSDate() : undefined,
+    byday,
+    bymonthday,
+    bymonth,
+  };
+}
 
 export const parseCalendars = async (
   responseData: string
@@ -80,6 +110,16 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
         ? new Date(endDate.getTime() - 86400000)
         : endDate;
 
+      const rruleProp = vevent.getFirstProperty("rrule");
+      let recurrenceRule: RecurrenceRule | undefined;
+      if (rruleProp) {
+        const rrule = rruleProp.getFirstValue();
+        if (rrule) {
+          const recur = ICAL.Recur.fromString(rrule.toString());
+          recurrenceRule = parseRecurrence(recur);
+        }
+      }
+
       events.push({
         uid: icalEvent.uid,
         summary: icalEvent.summary || "Untitled Event",
@@ -90,6 +130,7 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
         etag: eventData["getetag"] || "",
         href: obj["href"],
         wholeDay: isWholeDay,
+        recurrenceRule,
       });
     } catch (error) {
       console.error("Error parsing event data:", error);
