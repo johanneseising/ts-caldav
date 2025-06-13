@@ -2,6 +2,15 @@ import { XMLParser } from "fast-xml-parser";
 import { Calendar, Event, RecurrenceRule, SupportedComponent } from "../models";
 import ICAL from "ical.js";
 
+const normalizeParam = (
+  value: string | string[] | undefined
+): string | undefined => {
+  if (Array.isArray(value)) {
+    return value[0]; // pick the first one
+  }
+  return value;
+};
+
 function parseRecurrence(recur: ICAL.Recur): RecurrenceRule {
   const freqMap = {
     DAILY: "DAILY",
@@ -50,7 +59,12 @@ export const parseCalendars = async (
     const propstats = Array.isArray(res["propstat"])
       ? res["propstat"]
       : [res["propstat"]];
-    const okPropstat = propstats.find((p) => p["status"]?.includes("200 OK"));
+
+    const okPropstat = propstats.find(
+      (p) =>
+        typeof p["status"] === "string" &&
+        p["status"].toLowerCase().includes("200 ok")
+    );
     if (!okPropstat) continue;
 
     const prop = okPropstat["prop"];
@@ -96,13 +110,8 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
   const parser = new XMLParser({ removeNSPrefix: true });
   const jsonData = parser.parse(responseData);
   let response = jsonData["multistatus"]["response"];
-  if (!response) {
-    return events;
-  }
-
-  if (!Array.isArray(response)) {
-    response = [response];
-  }
+  if (!response) return events;
+  if (!Array.isArray(response)) response = [response];
 
   for (const obj of response) {
     const eventData = obj["propstat"]?.["prop"];
@@ -117,21 +126,24 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
       const jcalData = ICAL.parse(cleanedCalendarData);
       const vcalendar = new ICAL.Component(jcalData);
       const vevent = vcalendar.getFirstSubcomponent("vevent");
-
-      if (!vevent) {
-        console.warn("Skipping invalid event, no VEVENT found.");
-        continue;
-      }
+      if (!vevent) continue;
 
       const icalEvent = new ICAL.Event(vevent);
-      const isWholeDay = icalEvent.startDate.isDate;
-      const endDate = icalEvent.endDate
-        ? icalEvent.endDate.toJSDate()
-        : icalEvent.startDate.toJSDate();
 
+      const dtStartProp = vevent.getFirstProperty("dtstart");
+      const dtEndProp = vevent.getFirstProperty("dtend");
+
+      const isWholeDay = icalEvent.startDate.isDate;
+      const endDate =
+        icalEvent.endDate?.toJSDate() ?? icalEvent.startDate.toJSDate();
       const adjustedEnd = isWholeDay
         ? new Date(endDate.getTime() - 86400000)
         : endDate;
+
+      const startTzid =
+        normalizeParam(dtStartProp?.getParameter("tzid")) || undefined;
+      const endTzid =
+        normalizeParam(dtEndProp?.getParameter("tzid")) || undefined;
 
       const rruleProp = vevent.getFirstProperty("rrule");
       let recurrenceRule: RecurrenceRule | undefined;
@@ -148,12 +160,14 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
         summary: icalEvent.summary || "Untitled Event",
         start: icalEvent.startDate.toJSDate(),
         end: adjustedEnd,
-        description: icalEvent.description,
-        location: icalEvent.location,
+        description: icalEvent.description || undefined,
+        location: icalEvent.location || undefined,
         etag: eventData["getetag"] || "",
         href: obj["href"],
         wholeDay: isWholeDay,
         recurrenceRule,
+        startTzid,
+        endTzid,
       });
     } catch (error) {
       console.error("Error parsing event data:", error);

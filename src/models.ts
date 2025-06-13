@@ -58,6 +58,13 @@ export interface Event {
   href: string;
   wholeDay?: boolean;
   recurrenceRule?: RecurrenceRule;
+  startTzid?: string;
+  endTzid?: string;
+}
+
+export interface VTimezone {
+  tzid: string;
+  raw: string;
 }
 
 export type CalDAVResponse<T> = {

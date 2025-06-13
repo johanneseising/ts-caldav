@@ -29,4 +29,8 @@ jobs:
         run: npm install
 
       - name: Run tests
-        run: npm test -- client.test.ts
+        run: |
+          npx jest tests/client.test.ts \
+                   tests/recurrence.test.ts \
+                   tests/sync.test.ts \
+                   tests/timezone.test.ts

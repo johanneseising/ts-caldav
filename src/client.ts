@@ -264,7 +264,12 @@ export class CalDAVClient {
     if (!calendarUrl) {
       throw new Error("Calendar URL is required to create an event.");
     }
-
+    const eventUid = eventData.uid || uuidv4();
+    //Remove trailing slash from calendarUrl
+    if (calendarUrl.endsWith("/")) {
+      calendarUrl = calendarUrl.slice(0, -1);
+    }
+    const href = `${calendarUrl}/${eventUid}.ics`;
     const rrule = eventData.recurrenceRule
       ? `RRULE:${[
           eventData.recurrenceRule.freq
@@ -293,26 +298,27 @@ export class CalDAVClient {
           .join(";")}`
       : "";
 
-    const eventUid = eventData.uid || uuidv4();
-    //Remove trailing slash from calendarUrl
-    if (calendarUrl.endsWith("/")) {
-      calendarUrl = calendarUrl.slice(0, -1);
-    }
-    const href = `${calendarUrl}/${eventUid}.ics`;
     const dtStart =
       eventData.wholeDay === true
         ? `DTSTART;VALUE=DATE:${formatDateOnly(eventData.start)}`
+        : eventData.startTzid
+        ? `DTSTART;TZID=${eventData.startTzid}:${formatDate(
+            eventData.start,
+            false
+          )}`
         : `DTSTART:${formatDate(eventData.start)}`;
 
     const dtEnd =
       eventData.wholeDay === true
         ? `DTEND;VALUE=DATE:${formatDateOnly(eventData.end)}`
+        : eventData.endTzid
+        ? `DTEND;TZID=${eventData.endTzid}:${formatDate(eventData.end, false)}`
         : `DTEND:${formatDate(eventData.end)}`;
 
     const vevent = `
       BEGIN:VCALENDAR
-      PRODID:${this.prodId}
       VERSION:2.0
+      PRODID:${this.prodId}
       BEGIN:VEVENT
       UID:${eventUid}
       DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
@@ -324,8 +330,7 @@ export class CalDAVClient {
       LOCATION:${eventData.location || ""}
       END:VEVENT
       END:VCALENDAR
-    `.replace(/^\s+/gm, "");
-
+      `.replace(/^\s+/gm, "");
     try {
       const response = await this.httpClient.put(href, vevent, {
         headers: {
@@ -351,7 +356,7 @@ export class CalDAVClient {
       if (axios.isAxiosError(error) && error.response?.status === 412) {
         throw new Error(`Event with the specified uid already exists.`);
       }
-
+      console.error(error);
       throw new Error(`Failed to create event: ${error}`);
     }
   }
