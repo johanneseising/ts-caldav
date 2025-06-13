@@ -293,7 +293,7 @@ Contributions are very welcome! Take a look at [CONTRIBUTING](./contributing.md)
 
 - [x] Basic CalDAV client with calendar and event support
 - [x] Recurring event support (RRULE)
-- [ ] Timezone-aware event parsing and creation
+- [x] Timezone-aware event parsing and creation
 - [ ] WebDAV sync-token support
 - [ ] VTODO and VJURNAL support
 
