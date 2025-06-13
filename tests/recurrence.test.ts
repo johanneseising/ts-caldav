@@ -2,7 +2,7 @@ import { CalDAVClient } from "../src/client";
 import dotenv from "dotenv";
 
 dotenv.config();
-
+jest.setTimeout(30000);
 const getDateRange = () => ({
   start: new Date(Date.now() - 24 * 60 * 60 * 1000),
   end: new Date(Date.now() + 24 * 60 * 60 * 1000),

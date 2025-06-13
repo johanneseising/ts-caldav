@@ -14,22 +14,17 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
         with:
-          version: 10
-
-      - name: Install pnpm
-        run: npm install -g pnpm
+          node-version: 16 # Specify your Node.js version
+          registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
       - name: Build package
-        run: pnpm run build
+        run: npm run build
 
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --access public
+        run: npm publish
