@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { Calendar, Event, RecurrenceRule } from "../models";
+import { Calendar, Event, RecurrenceRule, SupportedComponent } from "../models";
 import ICAL from "ical.js";
 
 function parseRecurrence(recur: ICAL.Recur): RecurrenceRule {
@@ -35,35 +35,58 @@ function parseRecurrence(recur: ICAL.Recur): RecurrenceRule {
 export const parseCalendars = async (
   responseData: string
 ): Promise<Calendar[]> => {
-  const calendars = [];
+  const calendars: Calendar[] = [];
 
-  const parser = new XMLParser({ removeNSPrefix: true });
+  const parser = new XMLParser({
+    removeNSPrefix: true,
+    ignoreAttributes: false,
+    attributeNamePrefix: "",
+  });
   const jsonData = parser.parse(responseData);
   const response = jsonData["multistatus"]["response"];
+  const responses = Array.isArray(response) ? response : [response];
 
-  for (const obj of response) {
-    const calendarData = obj["propstat"]["prop"];
+  for (const res of responses) {
+    const propstats = Array.isArray(res["propstat"])
+      ? res["propstat"]
+      : [res["propstat"]];
+    const okPropstat = propstats.find((p) => p["status"]?.includes("200 OK"));
+    if (!okPropstat) continue;
 
-    if (calendarData) {
-      const calendar = {
-        displayName: calendarData["displayname"]
-          ? calendarData["displayname"]
-          : "",
-        url: obj["href"],
-        ctag: calendarData["getctag"],
-        supportedComponents: calendarData["supported-calendar-component-set"][
-          "comp"
-        ]
-          ? calendarData["supported-calendar-component-set"]["comp"].map(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (comp: any) => comp["name"]
-            )
-          : [],
-      };
+    const prop = okPropstat["prop"];
+    const compData = prop?.["supported-calendar-component-set"]?.["comp"];
 
-      calendars.push(calendar);
-    }
+    // Normalize to array
+    const compArray: { name: string }[] = Array.isArray(compData)
+      ? compData
+      : compData
+      ? [compData]
+      : [];
+
+    const supportedComponents: SupportedComponent[] = compArray
+      .map((c) => c.name)
+      .filter((name): name is SupportedComponent =>
+        [
+          "VEVENT",
+          "VTODO",
+          "VJOURNAL",
+          "VFREEBUSY",
+          "VTIMEZONE",
+          "VAVAILABILITY",
+        ].includes(name)
+      );
+
+    if (!supportedComponents.includes("VEVENT")) continue;
+
+    const calendar: Calendar = {
+      displayName: prop["displayname"] ?? "",
+      url: res["href"],
+      ctag: prop["getctag"],
+      supportedComponents,
+    };
+    calendars.push(calendar);
   }
+
   return calendars;
 };
 

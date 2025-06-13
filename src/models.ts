@@ -10,7 +10,7 @@ export type AuthOptions =
   | { type: "basic"; username: string; password: string }
   | { type: "oauth"; accessToken: string };
 
-type SupportedComponent =
+export type SupportedComponent =
   | "VEVENT"
   | "VTODO"
   | "VJOURNAL"

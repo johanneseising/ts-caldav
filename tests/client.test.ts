@@ -57,7 +57,6 @@ describe("CalDAVClient Calendar Operations", () => {
 
   test("Get calendars", async () => {
     const calendars = await client.getCalendars();
-
     expect(calendars).toBeDefined();
     expect(calendars).toBeInstanceOf(Array);
     expect(calendars.length).toBeGreaterThan(0);
