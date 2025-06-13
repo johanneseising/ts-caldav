@@ -356,7 +356,6 @@ export class CalDAVClient {
       if (axios.isAxiosError(error) && error.response?.status === 412) {
         throw new Error(`Event with the specified uid already exists.`);
       }
-      console.error(error);
       throw new Error(`Failed to create event: ${error}`);
     }
   }

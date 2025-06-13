@@ -105,25 +105,31 @@ const events = await client.getEvents(calendarUrl, {
 });
 ```
 
+Returned `Event` objects include `startTzid` and `endTzid` (if defined in the calendar).
+
 ---
 
 ### `createEvent(calendarUrl, eventData)`
 
-Creates a new calendar event. Supports full-day and recurring events.
+Creates a new calendar event. Supports:
+
+- Full-day events (`wholeDay: true`)
+- Recurring events (`recurrenceRule`)
+- Timezone-aware events (`startTzid`, `endTzid`)
 
 ```ts
 await client.createEvent(calendar.url, {
   summary: "Team Sync",
-  start: new Date(),
-  end: new Date(Date.now() + 3600000),
-  recurrenceRule: {
-    freq: "WEEKLY",
-    interval: 1,
-    byday: ["MO", "WE"],
-    until: new Date("2025-12-31")
-  }
+  start: new Date("2025-07-01T09:00:00"),
+  end: new Date("2025-07-01T10:00:00"),
+  startTzid: "Europe/Berlin",
+  endTzid: "Europe/Berlin",
 });
 ```
+
+If `startTzid` and `endTzid` are omitted, the event will be stored in UTC.
+
+To use full timezone definitions (e.g., for legacy CalDAV servers), you may optionally include your own `VTIMEZONE` component via raw iCal data.
 
 ---
 
@@ -137,11 +143,42 @@ Deletes an event by UID. Optionally provide ETag for safe deletion.
 
 Compares remote calendar state to local references using `getctag` and `etag`.
 
+Returns a structure with:
+
+- `changed`
+- `newCtag`
+- `newEvents`
+- `updatedEvents`
+- `deletedEvents`
+
 ---
 
 ### `getEventsByHref(calendarUrl, hrefs: string[])`
 
 Fetches full `.ics` data for specific event hrefs.
+
+---
+
+## Timezone Support
+
+The library supports per-event timezones using `startTzid` and `endTzid` fields:
+
+```ts
+await client.createEvent(calendar.url, {
+  summary: "Flight to SF",
+  start: new Date("2025-07-01T15:00:00"),
+  end: new Date("2025-07-01T18:00:00"),
+  startTzid: "Europe/Berlin",
+  endTzid: "America/Los_Angeles",
+});
+```
+
+When fetching events, `startTzid` and `endTzid` will be parsed (if present in the `VEVENT`) so that you can:
+
+- Correctly interpret time in the user's zone
+- Normalize across time zones for scheduling
+
+If no `TZID` is set, dates are treated as UTC.
 
 ---
 
