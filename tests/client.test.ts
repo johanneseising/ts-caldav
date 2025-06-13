@@ -2,7 +2,7 @@ import { CalDAVClient } from "../src/client";
 import dotenv from "dotenv";
 
 dotenv.config();
-jest.setTimeout(30000);
+
 const getDateRange = () => ({
   start: new Date(Date.now() - 24 * 60 * 60 * 1000),
   end: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -134,9 +134,57 @@ describe("CalDAVClient Calendar Operations", () => {
     expect(found?.wholeDay).toBe(true);
 
     await client.deleteEvent(calendarUrl, res.uid);
-  }, 10000);
+  });
 
   test("Clean up sync event", async () => {
     await client.deleteEvent(calendarUrl, eventUid);
+  });
+
+  test("Fetch ETag using getETag", async () => {
+    const now = new Date();
+    const end = new Date(now.getTime() + 3600000);
+
+    const { uid, href } = await client.createEvent(calendarUrl, {
+      start: now,
+      end,
+      summary: "ETag Fetch Test",
+    });
+
+    const etag = await client.getETag(href);
+
+    expect(typeof etag).toBe("string");
+    expect(etag.length).toBeGreaterThan(0);
+
+    await client.deleteEvent(calendarUrl, uid);
+  });
+
+  test("Update event", async () => {
+    const now = new Date();
+    const end = new Date(now.getTime() + 3600000);
+
+    const createRes = await client.createEvent(calendarUrl, {
+      start: now,
+      end,
+      summary: "Original Title",
+    });
+
+    const etag = await client.getETag(createRes.href);
+
+    const updated = await client.updateEvent(calendarUrl, {
+      uid: createRes.uid,
+      href: createRes.href,
+      etag,
+      start: now,
+      end,
+      summary: "Updated Title",
+    });
+
+    const events = await client.getEventsByHref(calendarUrl, [updated.href]);
+    const updatedEvent = events.find((e) => e.href === updated.href);
+
+    expect(updatedEvent).toBeDefined();
+    expect(updatedEvent?.summary).toBe("Updated Title");
+
+    await client.deleteEvent(calendarUrl, updated.uid);
   });
 });

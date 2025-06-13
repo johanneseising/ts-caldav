@@ -2,7 +2,7 @@ import { CalDAVClient } from "../src/client";
 import dotenv from "dotenv";
 
 dotenv.config();
-jest.setTimeout(30000);
+
 describe("Timezone Event Handling", () => {
   let client: CalDAVClient;
   let calendarUrl: string;

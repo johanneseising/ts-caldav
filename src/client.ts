@@ -246,6 +246,109 @@ export class CalDAVClient {
     }
   }
 
+  private buildICSData(
+    event: PartialBy<Event, "uid" | "etag" | "href">,
+    uid: string
+  ): string {
+    const rrule = event.recurrenceRule
+      ? `RRULE:${[
+          event.recurrenceRule.freq
+            ? `FREQ=${event.recurrenceRule.freq}`
+            : null,
+          event.recurrenceRule.interval
+            ? `INTERVAL=${event.recurrenceRule.interval}`
+            : null,
+          event.recurrenceRule.count
+            ? `COUNT=${event.recurrenceRule.count}`
+            : null,
+          event.recurrenceRule.until
+            ? `UNTIL=${formatDate(event.recurrenceRule.until)}`
+            : null,
+          event.recurrenceRule.byday
+            ? `BYDAY=${event.recurrenceRule.byday.join(",")}`
+            : null,
+          event.recurrenceRule.bymonthday
+            ? `BYMONTHDAY=${event.recurrenceRule.bymonthday.join(",")}`
+            : null,
+          event.recurrenceRule.bymonth
+            ? `BYMONTH=${event.recurrenceRule.bymonth.join(",")}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(";")}`
+      : "";
+
+    const dtStart =
+      event.wholeDay === true
+        ? `DTSTART;VALUE=DATE:${formatDateOnly(event.start)}`
+        : event.startTzid
+        ? `DTSTART;TZID=${event.startTzid}:${formatDate(event.start, false)}`
+        : `DTSTART:${formatDate(event.start)}`;
+
+    const dtEnd =
+      event.wholeDay === true
+        ? `DTEND;VALUE=DATE:${formatDateOnly(event.end)}`
+        : event.endTzid
+        ? `DTEND;TZID=${event.endTzid}:${formatDate(event.end, false)}`
+        : `DTEND:${formatDate(event.end)}`;
+
+    return `
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      PRODID:${this.prodId}
+      BEGIN:VEVENT
+      UID:${uid}
+      DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
+      ${dtStart}
+      ${dtEnd}
+      ${rrule}
+      SUMMARY:${event.summary}
+      DESCRIPTION:${event.description || ""}
+      LOCATION:${event.location || ""}
+      END:VEVENT
+      END:VCALENDAR
+        `.replace(/^\s+/gm, "");
+  }
+
+  /**
+   * Fetches the current ETag for a given event href.
+   * Useful when the server does not return an ETag on creation (e.g. Yahoo).
+   * @param href - The full CalDAV event URL (ending in .ics).
+   * @returns The ETag string, or throws an error if not found.
+   */
+  public async getETag(href: string): Promise<string> {
+    try {
+      const response = await this.httpClient.request({
+        method: "PROPFIND",
+        url: href,
+        headers: {
+          Depth: "0",
+        },
+        data: `
+        <d:propfind xmlns:d="DAV:">
+          <d:prop><d:getetag/></d:prop>
+        </d:propfind>
+      `,
+        validateStatus: (status) => status === 207,
+      });
+
+      const parser = new XMLParser({ removeNSPrefix: true });
+      const parsed = parser.parse(response.data);
+
+      const etag =
+        parsed?.multistatus?.response?.propstat?.prop?.getetag ||
+        parsed?.multistatus?.response?.[0]?.propstat?.prop?.getetag;
+
+      if (!etag) {
+        throw new Error("ETag not found in PROPFIND response.");
+      }
+
+      return etag.replace(/^W\//, ""); // remove weak validator prefix if present
+    } catch (error) {
+      throw new Error(`Failed to retrieve ETag for ${href}: ${error}`);
+    }
+  }
+
   /**
    * Creates a new event in the specified calendar.
    * @param calendarUrl - The URL of the calendar to create the event in.
@@ -265,72 +368,12 @@ export class CalDAVClient {
       throw new Error("Calendar URL is required to create an event.");
     }
     const eventUid = eventData.uid || uuidv4();
-    //Remove trailing slash from calendarUrl
+
     if (calendarUrl.endsWith("/")) {
       calendarUrl = calendarUrl.slice(0, -1);
     }
     const href = `${calendarUrl}/${eventUid}.ics`;
-    const rrule = eventData.recurrenceRule
-      ? `RRULE:${[
-          eventData.recurrenceRule.freq
-            ? `FREQ=${eventData.recurrenceRule.freq}`
-            : null,
-          eventData.recurrenceRule.interval
-            ? `INTERVAL=${eventData.recurrenceRule.interval}`
-            : null,
-          eventData.recurrenceRule.count
-            ? `COUNT=${eventData.recurrenceRule.count}`
-            : null,
-          eventData.recurrenceRule.until
-            ? `UNTIL=${formatDate(eventData.recurrenceRule.until)}`
-            : null,
-          eventData.recurrenceRule.byday
-            ? `BYDAY=${eventData.recurrenceRule.byday.join(",")}`
-            : null,
-          eventData.recurrenceRule.bymonthday
-            ? `BYMONTHDAY=${eventData.recurrenceRule.bymonthday.join(",")}`
-            : null,
-          eventData.recurrenceRule.bymonth
-            ? `BYMONTH=${eventData.recurrenceRule.bymonth.join(",")}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(";")}`
-      : "";
-
-    const dtStart =
-      eventData.wholeDay === true
-        ? `DTSTART;VALUE=DATE:${formatDateOnly(eventData.start)}`
-        : eventData.startTzid
-        ? `DTSTART;TZID=${eventData.startTzid}:${formatDate(
-            eventData.start,
-            false
-          )}`
-        : `DTSTART:${formatDate(eventData.start)}`;
-
-    const dtEnd =
-      eventData.wholeDay === true
-        ? `DTEND;VALUE=DATE:${formatDateOnly(eventData.end)}`
-        : eventData.endTzid
-        ? `DTEND;TZID=${eventData.endTzid}:${formatDate(eventData.end, false)}`
-        : `DTEND:${formatDate(eventData.end)}`;
-
-    const vevent = `
-      BEGIN:VCALENDAR
-      VERSION:2.0
-      PRODID:${this.prodId}
-      BEGIN:VEVENT
-      UID:${eventUid}
-      DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
-      ${dtStart}
-      ${dtEnd}
-      ${rrule}
-      SUMMARY:${eventData.summary}
-      DESCRIPTION:${eventData.description || ""}
-      LOCATION:${eventData.location || ""}
-      END:VEVENT
-      END:VCALENDAR
-      `.replace(/^\s+/gm, "");
+    const vevent = this.buildICSData(eventData, eventUid);
     try {
       const response = await this.httpClient.put(href, vevent, {
         headers: {
@@ -341,7 +384,6 @@ export class CalDAVClient {
       });
 
       const etag = response.headers["etag"] || "";
-
       const newCtag = await this.getCtag(calendarUrl);
 
       return {
@@ -357,6 +399,57 @@ export class CalDAVClient {
         throw new Error(`Event with the specified uid already exists.`);
       }
       throw new Error(`Failed to create event: ${error}`);
+    }
+  }
+
+  /**
+   * Updates an existing event in the specified calendar.
+   * @param calendarUrl - The URL of the calendar to update the event in.
+   * @param event - The event details to update.
+   * @returns An object containing the updated event's UID, href, etag, and new ctag.
+   */
+  public async updateEvent(
+    calendarUrl: string,
+    event: Event
+  ): Promise<{
+    uid: string;
+    href: string;
+    etag: string;
+    newCtag: string;
+  }> {
+    if (!event.uid || !event.href) {
+      throw new Error("Both 'uid' and 'href' are required to update an event.");
+    }
+
+    if (calendarUrl.endsWith("/")) {
+      calendarUrl = calendarUrl.slice(0, -1);
+    }
+    const vevent = this.buildICSData(event, event.uid);
+    const ifMatch = event.etag?.replace(/^W\//, "").trim();
+
+    try {
+      const response = await this.httpClient.put(event.href, vevent, {
+        headers: {
+          "Content-Type": "text/calendar; charset=utf-8",
+          "If-Match": ifMatch && ifMatch !== "" ? ifMatch : "*",
+        },
+        validateStatus: (status) => status === 200 || status === 204,
+      });
+
+      const newEtag = response.headers["etag"] || "";
+      const newCtag = await this.getCtag(calendarUrl);
+
+      return {
+        uid: event.uid,
+        href: event.href,
+        etag: newEtag,
+        newCtag,
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 412) {
+        throw new Error(`Event with the specified uid does not match.`);
+      }
+      throw new Error(`Failed to update event: ${error}`);
     }
   }
 

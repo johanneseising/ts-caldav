@@ -1,4 +1,3 @@
-
 # ts-caldav
 
 [![Run Tests](https://github.com/KlautNet/ts-caldav/actions/workflows/test.yml/badge.svg)](https://github.com/KlautNet/ts-caldav/actions/workflows/test.yml)
@@ -131,6 +130,12 @@ If `startTzid` and `endTzid` are omitted, the event will be stored in UTC.
 
 To use full timezone definitions (e.g., for legacy CalDAV servers), you may optionally include your own `VTIMEZONE` component via raw iCal data.
 
+> ⚠️ **ETag Notice**  
+> Some CalDAV servers like Yahoo do not return an `ETag` header when creating events.  
+> Because `ETag` is required to safely update events, calling `updateEvent` on strict CalDAV servers may fail unless the `ETag` is manually retrieved via `PROPFIND`.  
+>
+> You can use the getETag() function to manually fetch the ETag
+
 ---
 
 ### `deleteEvent(calendarUrl, eventUid, etag?)`
@@ -156,6 +161,36 @@ Returns a structure with:
 ### `getEventsByHref(calendarUrl, hrefs: string[])`
 
 Fetches full `.ics` data for specific event hrefs.
+
+---
+
+### `getETag(href: string): Promise<string>`
+
+Fetches the current `ETag` for a specific event.
+
+This is useful for servers (like Yahoo) that do not return the `ETag` after event creation. You can retrieve it manually using the event's `href` before performing an update or deletion that requires an `ETag`.
+
+```ts
+const etag = await client.getETag("/calendars/user/calendar-id/event-id.ics");
+await client.updateEvent(calendarUrl, {
+  uid: "event-id",
+  href: "/calendars/user/calendar-id/event-id.ics",
+  etag,
+  summary: "Updated summary",
+  start: new Date(),
+  end: new Date(Date.now() + 60 * 60 * 1000),
+});
+```
+
+#### Parameters
+
+- `href`: `string` – The full CalDAV URL of the `.ics` event resource.
+
+#### Returns
+
+- A `Promise<string>` resolving to the `ETag` value. Throws if the ETag is not found or the request fails.
+
+> ℹ️ This method automatically strips weak validator prefixes (e.g., `W/"..."`) for safe use with `If-Match`.
 
 ---
 
@@ -251,8 +286,6 @@ npm run build
 ## Contributing
 
 Contributions are very welcome! Take a look at [CONTRIBUTING](./contributing.md) to get started.
-
----
 
 ---
 
