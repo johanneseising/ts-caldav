@@ -23,6 +23,15 @@ export class CalDAVClient {
   public requestTimeout: number;
   public baseUrl: string;
 
+  private resolveUrl(path: string): string {
+    const basePath = new URL(this.baseUrl).pathname;
+    if (path.startsWith(basePath) && basePath !== "/") {
+      const stripped = path.substring(basePath.length);
+      return stripped.startsWith("/") ? stripped : "/" + stripped;
+    }
+    return path;
+  }
+
   private constructor(private options: CalDAVOptions) {
     this.httpClient = axios.create({
       baseURL: options.baseUrl,
@@ -66,7 +75,7 @@ export class CalDAVClient {
    */
   static async create(options: CalDAVOptions): Promise<CalDAVClient> {
     const client = new CalDAVClient(options);
-    const isGoogle = options.baseUrl.includes("apidata.googleusercontent.com");
+    const isGoogle = options.baseUrl?.includes("apidata.googleusercontent.com") ?? false;
     const discoveryPath = isGoogle ? `/caldav/v2/` : "/";
     await client.validateCredentials(discoveryPath);
     await client.fetchCalendarHome();
@@ -84,7 +93,7 @@ export class CalDAVClient {
     try {
       const response = await this.httpClient.request({
         method: "PROPFIND",
-        url: discoveryPath,
+        url: this.resolveUrl(discoveryPath),
         data: requestBody,
         headers: {
           Depth: "0",
@@ -103,10 +112,12 @@ export class CalDAVClient {
       });
       const jsonData = parser.parse(response.data, {});
 
-      this.userPrincipal =
+      const userPrincipalPath =
         jsonData["multistatus"]["response"]["propstat"]["prop"][
           "current-user-principal"
         ]["href"];
+
+      this.userPrincipal = this.resolveUrl(userPrincipalPath);
     } catch (error) {
       throw new Error(
         "Invalid credentials: Unable to authenticate with the server." + error
@@ -135,10 +146,12 @@ export class CalDAVClient {
     const parser = new XMLParser({ removeNSPrefix: true });
     const jsonData = parser.parse(response.data);
 
-    this.calendarHome =
+    const calendarHomePath =
       jsonData["multistatus"]["response"]["propstat"]["prop"][
         "calendar-home-set"
       ]["href"];
+
+    this.calendarHome = this.resolveUrl(calendarHomePath);
     return this.calendarHome;
   }
 
