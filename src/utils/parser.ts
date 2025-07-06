@@ -42,7 +42,8 @@ function parseRecurrence(recur: ICAL.Recur): RecurrenceRule {
 }
 
 export const parseCalendars = async (
-  responseData: string
+  responseData: string,
+  baseUrl?: string
 ): Promise<Calendar[]> => {
   const calendars: Calendar[] = [];
 
@@ -94,7 +95,7 @@ export const parseCalendars = async (
 
     const calendar: Calendar = {
       displayName: prop["displayname"] ?? "",
-      url: res["href"],
+      url: baseUrl ? new URL(res["href"], baseUrl).toString() : res["href"],
       ctag: prop["getctag"],
       supportedComponents,
     };
@@ -104,7 +105,7 @@ export const parseCalendars = async (
   return calendars;
 };
 
-export const parseEvents = async (responseData: string): Promise<Event[]> => {
+export const parseEvents = async (responseData: string, baseUrl?: string): Promise<Event[]> => {
   const events: Event[] = [];
 
   const parser = new XMLParser({ removeNSPrefix: true });
@@ -163,7 +164,7 @@ export const parseEvents = async (responseData: string): Promise<Event[]> => {
         description: icalEvent.description || undefined,
         location: icalEvent.location || undefined,
         etag: eventData["getetag"] || "",
-        href: obj["href"],
+        href: baseUrl ? new URL(obj["href"], baseUrl).toString() : obj["href"],
         wholeDay: isWholeDay,
         recurrenceRule,
         startTzid,
