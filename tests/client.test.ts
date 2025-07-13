@@ -187,4 +187,46 @@ describe("CalDAVClient Calendar Operations", () => {
 
     await client.deleteEvent(calendarUrl, updated.uid);
   });
+
+  test("Update event 2x", async () => {
+    const now = new Date();
+    const end = new Date(now.getTime() + 3600000);
+
+    const createRes = await client.createEvent(calendarUrl, {
+      start: now,
+      end,
+      summary: "Original Title",
+    });
+
+    const etag = await client.getETag(createRes.href);
+
+    const updated = await client.updateEvent(calendarUrl, {
+      uid: createRes.uid,
+      href: createRes.href,
+      etag,
+      start: now,
+      end,
+      summary: "Updated Title",
+    });
+
+    // wait a bit to ensure the ETag changes
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const newUpdated = await client.updateEvent(calendarUrl, {
+      uid: createRes.uid,
+      href: createRes.href,
+      etag: updated.etag,
+      start: now,
+      end,
+      summary: "Updated Title",
+    });
+
+    const events = await client.getEventsByHref(calendarUrl, [newUpdated.href]);
+    const updatedEvent = events.find((e) => e.href === newUpdated.href);
+
+    expect(updatedEvent).toBeDefined();
+    expect(updatedEvent?.summary).toBe("Updated Title");
+
+    await client.deleteEvent(calendarUrl, newUpdated.uid);
+  });
 });

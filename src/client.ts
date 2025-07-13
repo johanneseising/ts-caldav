@@ -75,7 +75,8 @@ export class CalDAVClient {
    */
   static async create(options: CalDAVOptions): Promise<CalDAVClient> {
     const client = new CalDAVClient(options);
-    const isGoogle = options.baseUrl?.includes("apidata.googleusercontent.com") ?? false;
+    const isGoogle =
+      options.baseUrl?.includes("apidata.googleusercontent.com") ?? false;
     const discoveryPath = isGoogle ? `/caldav/v2/` : "/";
     await client.validateCredentials(discoveryPath);
     await client.fetchCalendarHome();
@@ -415,6 +416,10 @@ export class CalDAVClient {
     }
   }
 
+  private isWeak(etag?: string) {
+    return etag?.startsWith('W/"') || etag?.startsWith("W/");
+  }
+
   /**
    * Updates an existing event in the specified calendar.
    * @param calendarUrl - The URL of the calendar to update the event in.
@@ -439,12 +444,12 @@ export class CalDAVClient {
     }
     const vevent = this.buildICSData(event, event.uid);
     const ifMatch = event.etag?.replace(/^W\//, "").trim();
-
+    const ifMatchHeader = this.isWeak(ifMatch) ? null : `If-Match: ${ifMatch}`;
     try {
       const response = await this.httpClient.put(event.href, vevent, {
         headers: {
           "Content-Type": "text/calendar; charset=utf-8",
-          "If-Match": ifMatch && ifMatch !== "" ? ifMatch : "*",
+          ifMatchHeader,
         },
         validateStatus: (status) => status === 200 || status === 204,
       });

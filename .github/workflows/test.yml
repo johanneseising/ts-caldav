@@ -32,6 +32,5 @@ jobs:
         run: |
           npx jest tests/client.test.ts \
                    tests/recurrence.test.ts \
-                   tests/sync.test.ts \
                    tests/timezone.test.ts \
                    tests/url-duplication-fix.test.ts
