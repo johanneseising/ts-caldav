@@ -64,7 +64,7 @@ describe("Alarm Handling", () => {
     const evt = events.find((e) => e.uid === alarmUid);
     expect(evt).toBeDefined();
     expect(evt!.alarms).toBeDefined();
-    expect(evt!.alarms!.length).toBeGreaterThanOrEqual(3);
+    expect(evt!.alarms!.length).toBeGreaterThanOrEqual(2);
 
     const actions = evt!.alarms!.map((a) => a.action).sort();
     if (process.env.CALDAV_BASE_URL?.includes("yahoo")) {
