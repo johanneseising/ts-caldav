@@ -39,7 +39,7 @@ export class CalDAVClient {
         Authorization:
           options.auth.type === "basic"
             ? `Basic ${encode(
-                `${options.auth.username}:${options.auth.password}`
+                `${options.auth.username}:${options.auth.password}`,
               )}`
             : `Bearer ${options.auth.accessToken}`,
         "Content-Type": "application/xml; charset=utf-8",
@@ -105,7 +105,7 @@ export class CalDAVClient {
 
       if (!response.data.includes("current-user-principal")) {
         throw new Error(
-          "User principal not found: Unable to authenticate with the server."
+          "User principal not found: Unable to authenticate with the server.",
         );
       }
       const parser = new XMLParser({
@@ -121,7 +121,7 @@ export class CalDAVClient {
       this.userPrincipal = this.resolveUrl(userPrincipalPath);
     } catch (error) {
       throw new Error(
-        "Invalid credentials: Unable to authenticate with the server." + error
+        "Invalid credentials: Unable to authenticate with the server." + error,
       );
     }
   }
@@ -203,18 +203,18 @@ export class CalDAVClient {
    */
   public async getEvents(
     calendarUrl: string,
-    options?: { start?: Date; end?: Date }
+    options?: { start?: Date; end?: Date; all?: boolean },
   ): Promise<Event[]> {
     // use start and end from options if present, otherwise use today and today+3 weeks
     const now = new Date();
     const defaultEnd = new Date(now.getTime() + 3 * 7 * 24 * 60 * 60 * 1000); // 3 weeks from now
-    const { start = now, end = defaultEnd } = options || {};
+    const { start = now, end = defaultEnd, all } = options || {};
 
     const timeRangeFilter =
-      start && end
+      start && end && !all
         ? `<c:comp-filter name="VEVENT">
              <c:time-range start="${this.formatDate(
-               start
+               start,
              )}" end="${this.formatDate(end)}" />
            </c:comp-filter>`
         : `<c:comp-filter name="VEVENT" />`;
@@ -223,8 +223,8 @@ export class CalDAVClient {
       start && end
         ? ` <c:calendar-data>
             <c:expand start="${this.formatDate(start)}" end="${this.formatDate(
-            end
-          )}"/>
+              end,
+            )}"/>
           </c:calendar-data>`
         : `<c:calendar-data />`;
 
@@ -255,14 +255,14 @@ export class CalDAVClient {
       return parseEvents(response.data);
     } catch (error) {
       throw new Error(
-        "Failed to retrieve events from the CalDAV server." + error
+        "Failed to retrieve events from the CalDAV server." + error,
       );
     }
   }
 
   private buildICSData(
     event: PartialBy<Event, "uid" | "etag" | "href">,
-    uid: string
+    uid: string,
   ): string {
     const rrule = event.recurrenceRule
       ? `RRULE:${[
@@ -296,15 +296,53 @@ export class CalDAVClient {
       event.wholeDay === true
         ? `DTSTART;VALUE=DATE:${formatDateOnly(event.start)}`
         : event.startTzid
-        ? `DTSTART;TZID=${event.startTzid}:${formatDate(event.start, false)}`
-        : `DTSTART:${formatDate(event.start)}`;
+          ? `DTSTART;TZID=${event.startTzid}:${formatDate(event.start, false)}`
+          : `DTSTART:${formatDate(event.start)}`;
 
     const dtEnd =
       event.wholeDay === true
         ? `DTEND;VALUE=DATE:${formatDateOnly(event.end)}`
         : event.endTzid
-        ? `DTEND;TZID=${event.endTzid}:${formatDate(event.end, false)}`
-        : `DTEND:${formatDate(event.end)}`;
+          ? `DTEND;TZID=${event.endTzid}:${formatDate(event.end, false)}`
+          : `DTEND:${formatDate(event.end)}`;
+
+    const alarmBlocks = (event.alarms || [])
+      .map((alarm) => {
+        switch (alarm.action) {
+          case "DISPLAY":
+            return [
+              "BEGIN:VALARM",
+              `TRIGGER:${alarm.trigger}`,
+              "ACTION:DISPLAY",
+              alarm.description ? `DESCRIPTION:${alarm.description}` : "",
+              "END:VALARM",
+            ]
+              .filter(Boolean)
+              .join("\r\n");
+
+          case "EMAIL":
+            return [
+              "BEGIN:VALARM",
+              `TRIGGER:${alarm.trigger}`,
+              "ACTION:EMAIL",
+              alarm.summary ? `SUMMARY:${alarm.summary}` : "",
+              alarm.description ? `DESCRIPTION:${alarm.description}` : "",
+              ...(alarm.attendees?.map((a) => `ATTENDEE:${a}`) || []),
+              "END:VALARM",
+            ]
+              .filter(Boolean)
+              .join("\r\n");
+
+          case "AUDIO":
+            return [
+              "BEGIN:VALARM",
+              `TRIGGER:${alarm.trigger}`,
+              "ACTION:AUDIO",
+              "END:VALARM",
+            ].join("\r\n");
+        }
+      })
+      .join("\r\n");
 
     return `
       BEGIN:VCALENDAR
@@ -319,6 +357,7 @@ export class CalDAVClient {
       SUMMARY:${event.summary}
       DESCRIPTION:${event.description || ""}
       LOCATION:${event.location || ""}
+      ${alarmBlocks}
       END:VEVENT
       END:VCALENDAR
         `.replace(/^\s+/gm, "");
@@ -371,7 +410,7 @@ export class CalDAVClient {
    */
   public async createEvent(
     calendarUrl: string,
-    eventData: PartialBy<Event, "uid" | "href" | "etag">
+    eventData: PartialBy<Event, "uid" | "href" | "etag">,
   ): Promise<{
     uid: string;
     href: string;
@@ -428,7 +467,7 @@ export class CalDAVClient {
    */
   public async updateEvent(
     calendarUrl: string,
-    event: Event
+    event: Event,
   ): Promise<{
     uid: string;
     href: string;
@@ -480,7 +519,7 @@ export class CalDAVClient {
   public async deleteEvent(
     calendarUrl: string,
     eventUid: string,
-    etag?: string
+    etag?: string,
   ): Promise<void> {
     if (calendarUrl.endsWith("/")) {
       calendarUrl = calendarUrl.slice(0, -1);
@@ -578,7 +617,7 @@ export class CalDAVClient {
 
   public async getEventsByHref(
     calendarUrl: string,
-    hrefs: string[]
+    hrefs: string[],
   ): Promise<Event[]> {
     if (!hrefs.length) {
       return [];
@@ -615,7 +654,7 @@ export class CalDAVClient {
   public async syncChanges(
     calendarUrl: string,
     ctag: string,
-    localEvents: EventRef[]
+    localEvents: EventRef[],
   ): Promise<SyncChangesResult> {
     const remoteCtag = await this.getCtag(calendarUrl);
 

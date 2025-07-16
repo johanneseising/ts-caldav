@@ -27,6 +27,24 @@ export type RecurrenceRule = {
   bymonth?: number[];
 };
 
+export type Alarm =
+  | {
+      action: "DISPLAY";
+      trigger: string;
+      description?: string;
+    }
+  | {
+      action: "EMAIL";
+      trigger: string;
+      description?: string;
+      summary?: string;
+      attendees: string[];
+    }
+  | {
+      action: "AUDIO";
+      trigger: string;
+    };
+
 export interface EventRef {
   href: string;
   etag: string;
@@ -60,6 +78,7 @@ export interface Event {
   recurrenceRule?: RecurrenceRule;
   startTzid?: string;
   endTzid?: string;
+  alarms?: Alarm[];
 }
 
 export interface VTimezone {

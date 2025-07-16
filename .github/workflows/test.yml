@@ -33,4 +33,5 @@ jobs:
           npx jest tests/client.test.ts \
                    tests/recurrence.test.ts \
                    tests/timezone.test.ts \
-                   tests/url-duplication-fix.test.ts
+                   tests/url-duplication-fix.test.ts \
+                   tests/alarms.test.ts

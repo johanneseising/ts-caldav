@@ -24,6 +24,8 @@
 ```bash
 npm install ts-caldav
 # or
+pnpm install ts-caldav
+# or
 yarn add ts-caldav
 ```
 
@@ -96,11 +98,13 @@ Returns an array of available calendars for the authenticated user.
 ### `getEvents(calendarUrl: string, options?): Promise<Event[]>`
 
 Fetches events within a given time range (defaults to 3 weeks ahead if none provided).
+When all is true and no time range is provided the Client fetches all Events.
 
 ```ts
 const events = await client.getEvents(calendarUrl, {
   start: new Date(),
   end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+  all: false
 });
 ```
 
@@ -123,6 +127,24 @@ await client.createEvent(calendar.url, {
   end: new Date("2025-07-01T10:00:00"),
   startTzid: "Europe/Berlin",
   endTzid: "Europe/Berlin",
+  alarms: [
+    {
+      action: "DISPLAY",
+      trigger: "-PT30M",
+      description: "Popup reminder",
+    },
+    {
+      action: "AUDIO",
+      trigger: "-PT15M",
+    },
+    {
+      action: "EMAIL",
+      trigger: "-PT10M",
+      summary: "Email Reminder",
+      description: "Meeting coming up",
+      attendees: ["mailto:test@example.com"],
+    },
+  ],
 });
 ```
 
@@ -130,9 +152,9 @@ If `startTzid` and `endTzid` are omitted, the event will be stored in UTC.
 
 To use full timezone definitions (e.g., for legacy CalDAV servers), you may optionally include your own `VTIMEZONE` component via raw iCal data.
 
-> ⚠️ **ETag Notice**  
-> Some CalDAV servers like Yahoo do not return an `ETag` header when creating events.  
-> Because `ETag` is required to safely update events, calling `updateEvent` on strict CalDAV servers may fail unless the `ETag` is manually retrieved via `PROPFIND`.  
+> ⚠️ **ETag Notice**
+> Some CalDAV servers like Yahoo do not return an `ETag` header when creating events.
+> Because `ETag` is required to safely update events, calling `updateEvent` on strict CalDAV servers may fail unless the `ETag` is manually retrieved via `PROPFIND`.
 >
 > You can use the getETag() function to manually fetch the ETag
 

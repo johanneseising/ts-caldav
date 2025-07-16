@@ -1,7 +1,7 @@
 {
   "name": "ts-caldav",
-  "version": "0.2.2",
-  "description": "A simple CalDAV client written in TypeScript",
+  "version": "0.2.3",
+  "description": "A CalDAV client written in TypeScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -15,7 +15,9 @@
     "calendar",
     "client",
     "caldav-client",
-    "ts-caldav"
+    "ts-caldav",
+    "react-native",
+    "nodejs"
   ],
   "author": "KlautNet",
   "license": "ISC",

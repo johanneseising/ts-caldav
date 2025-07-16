@@ -47,7 +47,7 @@ describe("CalDAVClient Credential Validation", () => {
           username: "invalid",
           password: "invalid",
         },
-      })
+      }),
     ).rejects.toThrow("Invalid credentials");
   });
 });
@@ -90,7 +90,7 @@ describe("CalDAVClient Calendar Operations", () => {
         end,
         summary: "Duplicate",
         uid: eventUid,
-      })
+      }),
     ).rejects.toThrow("already exists");
   });
 

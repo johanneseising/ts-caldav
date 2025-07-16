@@ -1,9 +1,15 @@
 import { XMLParser } from "fast-xml-parser";
-import { Calendar, Event, RecurrenceRule, SupportedComponent } from "../models";
+import {
+  Alarm,
+  Calendar,
+  Event,
+  RecurrenceRule,
+  SupportedComponent,
+} from "../models";
 import ICAL from "ical.js";
 
 const normalizeParam = (
-  value: string | string[] | undefined
+  value: string | string[] | undefined,
 ): string | undefined => {
   if (Array.isArray(value)) {
     return value[0]; // pick the first one
@@ -43,7 +49,7 @@ function parseRecurrence(recur: ICAL.Recur): RecurrenceRule {
 
 export const parseCalendars = async (
   responseData: string,
-  baseUrl?: string
+  baseUrl?: string,
 ): Promise<Calendar[]> => {
   const calendars: Calendar[] = [];
 
@@ -64,7 +70,7 @@ export const parseCalendars = async (
     const okPropstat = propstats.find(
       (p) =>
         typeof p["status"] === "string" &&
-        p["status"].toLowerCase().includes("200 ok")
+        p["status"].toLowerCase().includes("200 ok"),
     );
     if (!okPropstat) continue;
 
@@ -75,8 +81,8 @@ export const parseCalendars = async (
     const compArray: { name: string }[] = Array.isArray(compData)
       ? compData
       : compData
-      ? [compData]
-      : [];
+        ? [compData]
+        : [];
 
     const supportedComponents: SupportedComponent[] = compArray
       .map((c) => c.name)
@@ -88,7 +94,7 @@ export const parseCalendars = async (
           "VFREEBUSY",
           "VTIMEZONE",
           "VAVAILABILITY",
-        ].includes(name)
+        ].includes(name),
       );
 
     if (!supportedComponents.includes("VEVENT")) continue;
@@ -105,7 +111,10 @@ export const parseCalendars = async (
   return calendars;
 };
 
-export const parseEvents = async (responseData: string, baseUrl?: string): Promise<Event[]> => {
+export const parseEvents = async (
+  responseData: string,
+  baseUrl?: string,
+): Promise<Event[]> => {
   const events: Event[] = [];
 
   const parser = new XMLParser({ removeNSPrefix: true });
@@ -156,6 +165,46 @@ export const parseEvents = async (responseData: string, baseUrl?: string): Promi
         }
       }
 
+      const alarms: Alarm[] = [];
+      const valarms = vevent.getAllSubcomponents("valarm");
+
+      for (const valarm of valarms) {
+        const action = valarm.getFirstPropertyValue("action");
+        const trigger = valarm.getFirstPropertyValue("trigger")?.toString();
+
+        if (action === "DISPLAY" && trigger) {
+          alarms.push({
+            action: "DISPLAY",
+            trigger,
+            description:
+              valarm.getFirstPropertyValue("description")?.toString() ||
+              undefined,
+          });
+        } else if (action === "EMAIL" && trigger) {
+          const attendees =
+            valarm
+              .getAllProperties("attendee")
+              ?.map((p) => p.getFirstValue())
+              .filter((v): v is string => typeof v === "string") || [];
+
+          alarms.push({
+            action: "EMAIL",
+            trigger,
+            description:
+              valarm.getFirstPropertyValue("description")?.toString() ||
+              undefined,
+            summary:
+              valarm.getFirstPropertyValue("summary")?.toString() || undefined,
+            attendees,
+          });
+        } else if (action === "AUDIO" && trigger) {
+          alarms.push({
+            action: "AUDIO",
+            trigger,
+          });
+        }
+      }
+
       events.push({
         uid: icalEvent.uid,
         summary: icalEvent.summary || "Untitled Event",
@@ -169,6 +218,7 @@ export const parseEvents = async (responseData: string, baseUrl?: string): Promi
         recurrenceRule,
         startTzid,
         endTzid,
+        alarms,
       });
     } catch (error) {
       console.error("Error parsing event data:", error);
