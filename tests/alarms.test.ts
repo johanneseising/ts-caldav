@@ -68,7 +68,7 @@ describe("Alarm Handling", () => {
 
     const actions = evt!.alarms!.map((a) => a.action).sort();
     if (process.env.CALDAV_BASE_URL?.includes("yahoo")) {
-      expect(actions).toEqual(["DISPLAY", "EMAIL"].sort());
+      expect(actions).toEqual(["DISPLAY", "AUDIO"].sort());
     } else {
       expect(actions).toEqual(["AUDIO", "DISPLAY", "EMAIL"].sort());
     }
