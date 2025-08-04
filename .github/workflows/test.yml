@@ -34,4 +34,5 @@ jobs:
                    tests/recurrence.test.ts \
                    tests/timezone.test.ts \
                    tests/url-duplication-fix.test.ts \
-                   tests/alarms.test.ts
+                   tests/alarms.test.ts \
+                   tests/description-encoding.test.ts
