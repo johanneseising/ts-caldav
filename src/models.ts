@@ -85,8 +85,3 @@ export interface VTimezone {
   tzid: string;
   raw: string;
 }
-
-export type CalDAVResponse<T> = {
-  status: number;
-  data: T;
-};

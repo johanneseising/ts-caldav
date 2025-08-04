@@ -23,19 +23,6 @@ export const formatDate = (date: Date, utc: boolean = true): string => {
 };
 
 /**
- * Helper function to format dates for iCalendar with timezone.
- * @param date - The date to format.
- * @param tzid - The timezone ID (optional).
- * @returns A formatted date string for iCalendar with timezone.
- */
-export const formatDateWithTz = (date: Date, tzid?: string): string => {
-  if (tzid) {
-    return `DTSTART;TZID=${tzid}:${formatDate(date, false)}`;
-  }
-  return `DTSTART:${formatDate(date)}`;
-};
-
-/**
  * Helper function to format dates for all-day iCalendar events.
  * @param date - The date to format.
  * @returns A formatted date-only string (YYYYMMDD).

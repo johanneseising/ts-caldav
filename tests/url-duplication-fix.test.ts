@@ -62,7 +62,7 @@ describe("URL Duplication Bug Fix", () => {
     expect(mockedAxios.create).toHaveBeenCalledWith(
       expect.objectContaining({
         baseURL: baseUrl,
-      }),
+      })
     );
 
     const requestCalls = mockAxiosInstance.request.mock.calls;

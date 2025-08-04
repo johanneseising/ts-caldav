@@ -1,4 +1,8 @@
 import axios, { AxiosInstance } from "axios";
+import { encode } from "base-64";
+import { XMLParser } from "fast-xml-parser";
+import ICAL from "ical.js";
+import { v4 as uuidv4 } from "uuid";
 import {
   CalDAVOptions,
   Calendar,
@@ -6,11 +10,8 @@ import {
   EventRef,
   SyncChangesResult,
 } from "./models";
-import { encode } from "base-64";
+import { formatDate } from "./utils/encode";
 import { parseCalendars, parseEvents } from "./utils/parser";
-import { XMLParser } from "fast-xml-parser";
-import { formatDate, formatDateOnly } from "./utils/encode";
-import { v4 as uuidv4 } from "uuid";
 
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -39,7 +40,7 @@ export class CalDAVClient {
         Authorization:
           options.auth.type === "basic"
             ? `Basic ${encode(
-                `${options.auth.username}:${options.auth.password}`,
+                `${options.auth.username}:${options.auth.password}`
               )}`
             : `Bearer ${options.auth.accessToken}`,
         "Content-Type": "application/xml; charset=utf-8",
@@ -100,12 +101,12 @@ export class CalDAVClient {
           Depth: "0",
           Prefer: "return=minimal",
         },
-        validateStatus: (status) => status === 207,
+        validateStatus: (status) => status >= 200 && status < 300,
       });
 
       if (!response.data.includes("current-user-principal")) {
         throw new Error(
-          "User principal not found: Unable to authenticate with the server.",
+          "User principal not found: Unable to authenticate with the server."
         );
       }
       const parser = new XMLParser({
@@ -121,7 +122,7 @@ export class CalDAVClient {
       this.userPrincipal = this.resolveUrl(userPrincipalPath);
     } catch (error) {
       throw new Error(
-        "Invalid credentials: Unable to authenticate with the server." + error,
+        "Invalid credentials: Unable to authenticate with the server." + error
       );
     }
   }
@@ -141,7 +142,7 @@ export class CalDAVClient {
       headers: {
         Depth: "0",
       },
-      validateStatus: (status) => status === 207,
+      validateStatus: (status) => status >= 200 && status < 300,
     });
 
     const parser = new XMLParser({ removeNSPrefix: true });
@@ -182,14 +183,10 @@ export class CalDAVClient {
       headers: {
         Depth: "1",
       },
-      validateStatus: (status) => status === 207,
+      validateStatus: (status) => status >= 200 && status < 300,
     });
 
     return parseCalendars(response.data);
-  }
-
-  private formatDate(date: Date): string {
-    return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   }
 
   /**
@@ -203,7 +200,7 @@ export class CalDAVClient {
    */
   public async getEvents(
     calendarUrl: string,
-    options?: { start?: Date; end?: Date; all?: boolean },
+    options?: { start?: Date; end?: Date; all?: boolean }
   ): Promise<Event[]> {
     // use start and end from options if present, otherwise use today and today+3 weeks
     const now = new Date();
@@ -213,18 +210,16 @@ export class CalDAVClient {
     const timeRangeFilter =
       start && end && !all
         ? `<c:comp-filter name="VEVENT">
-             <c:time-range start="${this.formatDate(
-               start,
-             )}" end="${this.formatDate(end)}" />
+             <c:time-range start="${formatDate(start)}" end="${formatDate(
+            end
+          )}" />
            </c:comp-filter>`
         : `<c:comp-filter name="VEVENT" />`;
 
     const calendarData =
       start && end
         ? ` <c:calendar-data>
-            <c:expand start="${this.formatDate(start)}" end="${this.formatDate(
-              end,
-            )}"/>
+            <c:expand start="${formatDate(start)}" end="${formatDate(end)}"/>
           </c:calendar-data>`
         : `<c:calendar-data />`;
 
@@ -249,118 +244,118 @@ export class CalDAVClient {
         headers: {
           Depth: "1",
         },
-        validateStatus: (status) => status === 207,
+        validateStatus: (status) => status >= 200 && status < 300,
       });
 
       return parseEvents(response.data);
     } catch (error) {
       throw new Error(
-        "Failed to retrieve events from the CalDAV server." + error,
+        "Failed to retrieve events from the CalDAV server." + error
       );
     }
   }
 
   private buildICSData(
     event: PartialBy<Event, "uid" | "etag" | "href">,
-    uid: string,
+    uid: string
   ): string {
-    const rrule = event.recurrenceRule
-      ? `RRULE:${[
-          event.recurrenceRule.freq
-            ? `FREQ=${event.recurrenceRule.freq}`
-            : null,
-          event.recurrenceRule.interval
-            ? `INTERVAL=${event.recurrenceRule.interval}`
-            : null,
-          event.recurrenceRule.count
-            ? `COUNT=${event.recurrenceRule.count}`
-            : null,
-          event.recurrenceRule.until
-            ? `UNTIL=${formatDate(event.recurrenceRule.until)}`
-            : null,
-          event.recurrenceRule.byday
-            ? `BYDAY=${event.recurrenceRule.byday.join(",")}`
-            : null,
-          event.recurrenceRule.bymonthday
-            ? `BYMONTHDAY=${event.recurrenceRule.bymonthday.join(",")}`
-            : null,
-          event.recurrenceRule.bymonth
-            ? `BYMONTH=${event.recurrenceRule.bymonth.join(",")}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(";")}`
-      : "";
+    const vcalendar = new ICAL.Component(["vcalendar", [], []]);
+    vcalendar.addPropertyWithValue("version", "2.0");
+    vcalendar.addPropertyWithValue("prodid", this.prodId);
 
-    const dtStart =
-      event.wholeDay === true
-        ? `DTSTART;VALUE=DATE:${formatDateOnly(event.start)}`
-        : event.startTzid
-          ? `DTSTART;TZID=${event.startTzid}:${formatDate(event.start, false)}`
-          : `DTSTART:${formatDate(event.start)}`;
+    const vevent = new ICAL.Component("vevent");
+    const e = new ICAL.Event(vevent);
 
-    const dtEnd =
-      event.wholeDay === true
-        ? `DTEND;VALUE=DATE:${formatDateOnly(event.end)}`
-        : event.endTzid
-          ? `DTEND;TZID=${event.endTzid}:${formatDate(event.end, false)}`
-          : `DTEND:${formatDate(event.end)}`;
+    e.uid = uid;
 
-    const alarmBlocks = (event.alarms || [])
-      .map((alarm) => {
-        switch (alarm.action) {
-          case "DISPLAY":
-            return [
-              "BEGIN:VALARM",
-              `TRIGGER:${alarm.trigger}`,
-              "ACTION:DISPLAY",
-              alarm.description ? `DESCRIPTION:${alarm.description}` : "",
-              "END:VALARM",
-            ]
-              .filter(Boolean)
-              .join("\r\n");
+    vevent.addPropertyWithValue(
+      "dtstamp",
+      ICAL.Time.fromJSDate(new Date(), true)
+    );
 
-          case "EMAIL":
-            return [
-              "BEGIN:VALARM",
-              `TRIGGER:${alarm.trigger}`,
-              "ACTION:EMAIL",
-              alarm.summary ? `SUMMARY:${alarm.summary}` : "",
-              alarm.description ? `DESCRIPTION:${alarm.description}` : "",
-              ...(alarm.attendees?.map((a) => `ATTENDEE:${a}`) || []),
-              "END:VALARM",
-            ]
-              .filter(Boolean)
-              .join("\r\n");
+    if (event.wholeDay) {
+      e.startDate = ICAL.Time.fromDateString(
+        event.start.toISOString().split("T")[0]
+      );
+      e.endDate = ICAL.Time.fromDateString(
+        event.end.toISOString().split("T")[0]
+      );
+    } else {
+      const start = ICAL.Time.fromJSDate(event.start, true);
+      const end = ICAL.Time.fromJSDate(event.end, true);
 
-          case "AUDIO":
-            return [
-              "BEGIN:VALARM",
-              `TRIGGER:${alarm.trigger}`,
-              "ACTION:AUDIO",
-              "END:VALARM",
-            ].join("\r\n");
+      if (event.startTzid) {
+        const prop = vevent.addPropertyWithValue("dtstart", start);
+        prop.setParameter("tzid", event.startTzid);
+      } else {
+        e.startDate = start;
+      }
+
+      if (event.endTzid) {
+        const prop = vevent.addPropertyWithValue("dtend", end);
+        prop.setParameter("tzid", event.endTzid);
+      } else {
+        e.endDate = end;
+      }
+    }
+
+    e.summary = event.summary;
+    e.description = event.description || "";
+    e.location = event.location || "";
+
+    if (event.recurrenceRule) {
+      const rruleProps: Record<string, string | number> = {};
+
+      if (event.recurrenceRule.freq)
+        rruleProps.FREQ = event.recurrenceRule.freq;
+      if (event.recurrenceRule.interval)
+        rruleProps.INTERVAL = event.recurrenceRule.interval;
+      if (event.recurrenceRule.count)
+        rruleProps.COUNT = event.recurrenceRule.count;
+      if (event.recurrenceRule.until) {
+        rruleProps.UNTIL = ICAL.Time.fromJSDate(
+          event.recurrenceRule.until,
+          true
+        ).toString();
+      }
+      if (event.recurrenceRule.byday)
+        rruleProps.BYDAY = event.recurrenceRule.byday.join(",");
+      if (event.recurrenceRule.bymonthday)
+        rruleProps.BYMONTHDAY = event.recurrenceRule.bymonthday.join(",");
+      if (event.recurrenceRule.bymonth)
+        rruleProps.BYMONTH = event.recurrenceRule.bymonth.join(",");
+
+      vevent.addPropertyWithValue("rrule", rruleProps);
+    }
+
+    if (event.alarms) {
+      for (const alarm of event.alarms) {
+        const valarm = new ICAL.Component("valarm");
+
+        valarm.addPropertyWithValue("trigger", alarm.trigger);
+        valarm.addPropertyWithValue("action", alarm.action);
+
+        if (alarm.action === "DISPLAY" && alarm.description) {
+          valarm.addPropertyWithValue("description", alarm.description);
         }
-      })
-      .join("\r\n");
 
-    return `
-      BEGIN:VCALENDAR
-      VERSION:2.0
-      PRODID:${this.prodId}
-      BEGIN:VEVENT
-      UID:${uid}
-      DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z
-      ${dtStart}
-      ${dtEnd}
-      ${rrule}
-      SUMMARY:${event.summary}
-      DESCRIPTION:${event.description || ""}
-      LOCATION:${event.location || ""}
-      ${alarmBlocks}
-      END:VEVENT
-      END:VCALENDAR
-        `.replace(/^\s+/gm, "");
+        if (alarm.action === "EMAIL") {
+          if (alarm.summary)
+            valarm.addPropertyWithValue("summary", alarm.summary);
+          if (alarm.description)
+            valarm.addPropertyWithValue("description", alarm.description);
+          for (const attendee of alarm.attendees) {
+            valarm.addPropertyWithValue("attendee", attendee);
+          }
+        }
+
+        vevent.addSubcomponent(valarm);
+      }
+    }
+
+    vcalendar.addSubcomponent(vevent);
+
+    return vcalendar.toString();
   }
 
   /**
@@ -382,7 +377,7 @@ export class CalDAVClient {
           <d:prop><d:getetag/></d:prop>
         </d:propfind>
       `,
-        validateStatus: (status) => status === 207,
+        validateStatus: (status) => status >= 200 && status < 300,
       });
 
       const parser = new XMLParser({ removeNSPrefix: true });
@@ -410,7 +405,7 @@ export class CalDAVClient {
    */
   public async createEvent(
     calendarUrl: string,
-    eventData: PartialBy<Event, "uid" | "href" | "etag">,
+    eventData: PartialBy<Event, "uid" | "href" | "etag">
   ): Promise<{
     uid: string;
     href: string;
@@ -467,7 +462,7 @@ export class CalDAVClient {
    */
   public async updateEvent(
     calendarUrl: string,
-    event: Event,
+    event: Event
   ): Promise<{
     uid: string;
     href: string;
@@ -478,9 +473,9 @@ export class CalDAVClient {
       throw new Error("Both 'uid' and 'href' are required to update an event.");
     }
 
-    if (calendarUrl.endsWith("/")) {
-      calendarUrl = calendarUrl.slice(0, -1);
-    }
+    const normalizedUrl = calendarUrl.endsWith("/")
+      ? calendarUrl.slice(0, -1)
+      : calendarUrl;
     const vevent = this.buildICSData(event, event.uid);
     const ifMatch = event.etag?.replace(/^W\//, "").trim();
     const ifMatchHeader = this.isWeak(ifMatch) ? null : `If-Match: ${ifMatch}`;
@@ -490,11 +485,11 @@ export class CalDAVClient {
           "Content-Type": "text/calendar; charset=utf-8",
           ifMatchHeader,
         },
-        validateStatus: (status) => status === 200 || status === 204,
+        validateStatus: (status) => status >= 200 && status < 300,
       });
 
       const newEtag = response.headers["etag"] || "";
-      const newCtag = await this.getCtag(calendarUrl);
+      const newCtag = await this.getCtag(normalizedUrl);
 
       return {
         uid: event.uid,
@@ -519,13 +514,13 @@ export class CalDAVClient {
   public async deleteEvent(
     calendarUrl: string,
     eventUid: string,
-    etag?: string,
+    etag?: string
   ): Promise<void> {
-    if (calendarUrl.endsWith("/")) {
-      calendarUrl = calendarUrl.slice(0, -1);
-    }
+    const normalizedUrl = calendarUrl.endsWith("/")
+      ? calendarUrl.slice(0, -1)
+      : calendarUrl;
 
-    const href = `${calendarUrl}/${eventUid}.ics`;
+    const href = `${normalizedUrl}/${eventUid}.ics`;
 
     try {
       await this.httpClient.delete(href, {
@@ -582,7 +577,7 @@ export class CalDAVClient {
       headers: {
         Depth: "1",
       },
-      validateStatus: (status) => status === 207,
+      validateStatus: (status) => status >= 200 && status < 300,
     });
 
     const parser = new XMLParser({ removeNSPrefix: true });
@@ -617,7 +612,7 @@ export class CalDAVClient {
 
   public async getEventsByHref(
     calendarUrl: string,
-    hrefs: string[],
+    hrefs: string[]
   ): Promise<Event[]> {
     if (!hrefs.length) {
       return [];
@@ -645,7 +640,7 @@ export class CalDAVClient {
       headers: {
         Depth: "1",
       },
-      validateStatus: (status) => status === 207,
+      validateStatus: (status) => status >= 200 && status < 300,
     });
 
     return parseEvents(response.data);
@@ -654,7 +649,7 @@ export class CalDAVClient {
   public async syncChanges(
     calendarUrl: string,
     ctag: string,
-    localEvents: EventRef[],
+    localEvents: EventRef[]
   ): Promise<SyncChangesResult> {
     const remoteCtag = await this.getCtag(calendarUrl);
 
