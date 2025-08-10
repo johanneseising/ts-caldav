@@ -81,7 +81,31 @@ export interface Event {
   alarms?: Alarm[];
 }
 
+export type TodoRef = EventRef;
+
 export interface VTimezone {
   tzid: string;
   raw: string;
+}
+
+export interface SyncTodosResult {
+  changed: boolean;
+  newCtag: string;
+  newTodos: string[];
+  updatedTodos: string[];
+  deletedTodos: string[];
+}
+
+export interface Todo {
+  uid: string;
+  summary: string;
+  start?: Date;
+  due?: Date;
+  completed?: Date;
+  status?: string;
+  description?: string;
+  location?: string;
+  etag: string;
+  href: string;
+  alarms?: Alarm[];
 }

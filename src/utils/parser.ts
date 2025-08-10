@@ -5,6 +5,7 @@ import {
   Event,
   RecurrenceRule,
   SupportedComponent,
+  Todo,
 } from "../models";
 import ICAL from "ical.js";
 
@@ -91,7 +92,11 @@ export const parseCalendars = async (
         ].includes(name)
       );
 
-    if (!supportedComponents.includes("VEVENT")) continue;
+    if (
+      !supportedComponents.includes("VEVENT") &&
+      !supportedComponents.includes("VTODO")
+    )
+      continue;
 
     calendars.push({
       displayName: prop?.displayname ?? "",
@@ -217,4 +222,120 @@ export const parseEvents = async (
   }
 
   return events;
+};
+
+export const parseTodos = async (
+  responseData: string,
+  baseUrl?: string
+): Promise<Todo[]> => {
+  const todos: Todo[] = [];
+  const parser = new XMLParser({ removeNSPrefix: true });
+  const jsonData = parser.parse(responseData);
+  let response = jsonData["multistatus"]?.["response"];
+  if (!response) return todos;
+
+  if (!Array.isArray(response)) response = [response];
+
+  for (const obj of response) {
+    const todoData = obj["propstat"]?.["prop"];
+    if (!todoData) continue;
+
+    const rawCalendarData = todoData["calendar-data"];
+    if (!rawCalendarData) continue;
+
+    const cleanedCalendarData = rawCalendarData.replace(/&#13;/g, "\r\n");
+
+    try {
+      const jcalData = ICAL.parse(cleanedCalendarData);
+      const vcalendar = new ICAL.Component(jcalData);
+
+      const vtodos = vcalendar.getAllSubcomponents("vtodo");
+      for (const vtodo of vtodos) {
+        const uid = vtodo.getFirstPropertyValue("uid") as string;
+        const summary =
+          (vtodo.getFirstPropertyValue("summary") as string) || "Untitled Todo";
+        const description = vtodo.getFirstPropertyValue("description") as
+          | string
+          | undefined;
+        const location = vtodo.getFirstPropertyValue("location") as
+          | string
+          | undefined;
+        const status = vtodo.getFirstPropertyValue("status") as
+          | string
+          | undefined;
+
+        const dtStartProp = vtodo.getFirstProperty("dtstart");
+        const dueProp = vtodo.getFirstProperty("due");
+        const completedProp = vtodo.getFirstProperty("completed");
+
+        const start = dtStartProp
+          ? (dtStartProp.getFirstValue() as ICAL.Time).toJSDate()
+          : undefined;
+        const due = dueProp
+          ? (dueProp.getFirstValue() as ICAL.Time).toJSDate()
+          : undefined;
+        const completed = completedProp
+          ? (completedProp.getFirstValue() as ICAL.Time).toJSDate()
+          : undefined;
+
+        const alarms: Alarm[] = [];
+        const valarms = vtodo.getAllSubcomponents("valarm") || [];
+
+        for (const valarm of valarms) {
+          const action = valarm.getFirstPropertyValue("action");
+          const trigger = valarm.getFirstPropertyValue("trigger")?.toString();
+
+          if (!action || !trigger) continue;
+
+          if (action === "DISPLAY") {
+            alarms.push({
+              action: "DISPLAY",
+              trigger,
+              description: valarm
+                .getFirstPropertyValue("description")
+                ?.toString(),
+            });
+          } else if (action === "EMAIL") {
+            const attendees =
+              valarm
+                .getAllProperties("attendee")
+                ?.map((p) => p.getFirstValue())
+                .filter((v): v is string => typeof v === "string") || [];
+
+            alarms.push({
+              action: "EMAIL",
+              trigger,
+              description: valarm
+                .getFirstPropertyValue("description")
+                ?.toString(),
+              summary: valarm.getFirstPropertyValue("summary")?.toString(),
+              attendees,
+            });
+          } else if (action === "AUDIO") {
+            alarms.push({ action: "AUDIO", trigger });
+          }
+        }
+
+        todos.push({
+          uid,
+          summary,
+          start,
+          due,
+          completed,
+          status,
+          description,
+          location,
+          etag: todoData["getetag"] || "",
+          href: baseUrl
+            ? new URL(obj["href"], baseUrl).toString()
+            : obj["href"],
+          alarms,
+        });
+      }
+    } catch (error) {
+      console.error("Error parsing todo data:", error);
+    }
+  }
+
+  return todos;
 };
