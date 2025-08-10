@@ -23,7 +23,9 @@ beforeAll(async () => {
   });
 
   const calendars = await client.getCalendars();
-  calendarUrl = calendars[0].url;
+  calendarUrl =
+    calendars.find((cal) => cal.supportedComponents.includes("VTODO"))?.url ||
+    calendars[0].url;
 });
 
 describe("CalDAVClient Todo Operations", () => {
@@ -33,19 +35,18 @@ describe("CalDAVClient Todo Operations", () => {
 
   test("Create and fetch todo", async () => {
     const now = new Date();
-    const end = new Date(now.getTime() + 3600000); // +1h
+    const end = new Date(now.getTime());
 
-    const { uid } = await client.createTodo(calendarUrl, {
+    const created = await client.createTodo(calendarUrl, {
       due: end,
       summary: "Test Todo",
     });
-    todoUid = uid;
-
+    todoUid = created.uid;
     const todos = await client.getTodos(calendarUrl, getDateRange());
-    const created = todos.find((e) => e.uid === uid);
+    const found = todos.find((e) => e.uid === todoUid);
 
-    expect(created).toBeDefined();
-    expect(created?.summary).toBe("Test Todo");
+    expect(found).toBeDefined();
+    expect(found?.summary).toBe("Test Todo");
   });
 
   test("Duplicate todo creation fails", async () => {

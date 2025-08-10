@@ -1,6 +1,7 @@
 # ts-caldav
 
 [![Run Tests](https://github.com/KlautNet/ts-caldav/actions/workflows/test.yml/badge.svg)](https://github.com/KlautNet/ts-caldav/actions/workflows/test.yml)
+![npm version](https://img.shields.io/npm/v/ts-caldav.svg)
 
 > A lightweight, promise-based TypeScript CalDAV client for syncing calendar data in browser, Node.js, or React Native environments.
 

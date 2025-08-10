@@ -191,8 +191,8 @@ export class CalDAVClient {
     cache: CalDAVClientCache
   ): Promise<CalDAVClient> {
     const client = new CalDAVClient(options);
-    client.userPrincipal = client["resolveUrl"](cache.userPrincipal);
-    client.calendarHome = client["resolveUrl"](cache.calendarHome);
+    client.userPrincipal = client.resolveUrl(cache.userPrincipal);
+    client.calendarHome = client.resolveUrl(cache.calendarHome);
     if (cache.prodId) client.prodId = cache.prodId;
     return client; // no validateCredentials / no fetchCalendarHome
   }
@@ -227,7 +227,11 @@ export class CalDAVClient {
       validateStatus: (status) => status >= 200 && status < 300,
     });
 
-    return parseCalendars(response.data);
+    const calendars = await parseCalendars(response.data);
+    return calendars.map((cal) => ({
+      ...cal,
+      url: this.resolveUrl(cal.url),
+    }));
   }
 
   /**
@@ -258,7 +262,10 @@ export class CalDAVClient {
     calendarUrl: string,
     options?: { start?: Date; end?: Date; all?: boolean }
   ): Promise<Todo[]> {
-    return this.getComponents<Todo>(calendarUrl, "VTODO", parseTodos, options);
+    return this.getComponents<Todo>(calendarUrl, "VTODO", parseTodos, {
+      all: true,
+      ...options,
+    });
   }
 
   private async getComponents<T>(
@@ -281,7 +288,7 @@ export class CalDAVClient {
         : `<c:comp-filter name="${component}" />`;
 
     const calendarData =
-      start && end
+      start && end && !all && component === "VEVENT"
         ? ` <c:calendar-data>
             <c:expand start="${formatDate(start)}" end="${formatDate(end)}"/>
           </c:calendar-data>`
