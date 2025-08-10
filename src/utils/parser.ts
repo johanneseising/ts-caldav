@@ -128,7 +128,7 @@ export const parseEvents = async (
     const rawCalendarData = eventData["calendar-data"];
     if (!rawCalendarData) continue;
 
-    const cleanedCalendarData = rawCalendarData.replace(/&#13;/g, "\r\n");
+    const cleanedCalendarData = rawCalendarData.replace(/&#13;/g, "\r");
 
     try {
       const jcalData = ICAL.parse(cleanedCalendarData);
