@@ -430,6 +430,10 @@ export class CalDAVClient {
       vtodo.addPropertyWithValue("status", todo.status);
     }
 
+    if (todo.sortOrder !== undefined) {
+      vtodo.addPropertyWithValue("X-APPLE-SORT-ORDER", todo.sortOrder);
+    }
+
     if (todo.alarms) {
       for (const alarm of todo.alarms) {
         const valarm = new ICAL.Component("valarm");

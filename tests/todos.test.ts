@@ -165,4 +165,23 @@ describe("CalDAVClient Todo Operations", () => {
 
     await client.deleteTodo(calendarUrl, newUpdated.uid);
   });
+
+  test("Sort order in todo", async () => {
+    const now = new Date();
+    const end = new Date(now.getTime() + 3600000);
+
+    const res = await client.createTodo(calendarUrl, {
+      due: end,
+      summary: "Sort Order Test",
+      sortOrder: 100,
+    });
+
+    const todos = await client.getTodos(calendarUrl, getDateRange());
+    const created = todos.find((e) => e.uid === res.uid);
+
+    expect(created).toBeDefined();
+    expect(created?.sortOrder).toBe(100);
+
+    await client.deleteTodo(calendarUrl, res.uid);
+  });
 });

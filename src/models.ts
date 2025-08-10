@@ -108,4 +108,5 @@ export interface Todo {
   etag: string;
   href: string;
   alarms?: Alarm[];
+  sortOrder?: number;
 }

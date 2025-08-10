@@ -264,6 +264,14 @@ export const parseTodos = async (
           | string
           | undefined;
 
+        const sortOrderRaw = vtodo.getFirstPropertyValue(
+          "x-apple-sort-order"
+        ) as string | number | null | undefined;
+        const sortOrder =
+          sortOrderRaw !== undefined && sortOrderRaw !== null
+            ? Number(sortOrderRaw)
+            : undefined;
+
         const dtStartProp = vtodo.getFirstProperty("dtstart");
         const dueProp = vtodo.getFirstProperty("due");
         const completedProp = vtodo.getFirstProperty("completed");
@@ -330,6 +338,7 @@ export const parseTodos = async (
             ? new URL(obj["href"], baseUrl).toString()
             : obj["href"],
           alarms,
+          sortOrder,
         });
       }
     } catch (error) {

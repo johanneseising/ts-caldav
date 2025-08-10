@@ -19,6 +19,8 @@ beforeAll(async () => {
       username: process.env.CALDAV_USERNAME!,
       password: process.env.CALDAV_PASSWORD!,
     },
+    prodId: "-//My Company//My Product//EN",
+    logRequests: true,
     requestTimeout: 10000,
   });
 
