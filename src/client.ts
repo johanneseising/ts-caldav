@@ -4,6 +4,7 @@ import { XMLParser } from "fast-xml-parser";
 import ICAL from "ical.js";
 import { v4 as uuidv4 } from "uuid";
 import {
+  CalDAVClientCache,
   CalDAVOptions,
   Calendar,
   Event,
@@ -164,6 +165,43 @@ export class CalDAVClient {
     return this.calendarHome;
   }
 
+  /**
+   * Exports the current client state to a cache object.
+   * This can be used to restore the client state later without re-fetching the calendar home.
+   * @returns A CalDAVClientCache object containing the current client state.
+   */
+  public exportCache(): CalDAVClientCache {
+    return {
+      userPrincipal: this.userPrincipal!,
+      calendarHome: this.calendarHome!,
+      prodId: this.prodId,
+    };
+  }
+
+  /**
+   * Creates a CalDAVClient instance from a cache object.
+   * This is useful for restoring a client state without re-fetching the calendar home.
+   * @param options - The CalDAV client options.
+   * @param cache - The cached client state.
+   * @return A new CalDAVClient instance initialized with the cached state.
+   * @throws An error if the cache is invalid or incomplete.
+   */
+  static async createFromCache(
+    options: CalDAVOptions,
+    cache: CalDAVClientCache
+  ): Promise<CalDAVClient> {
+    const client = new CalDAVClient(options);
+    client.userPrincipal = client["resolveUrl"](cache.userPrincipal);
+    client.calendarHome = client["resolveUrl"](cache.calendarHome);
+    if (cache.prodId) client.prodId = cache.prodId;
+    return client; // no validateCredentials / no fetchCalendarHome
+  }
+
+  /**
+   * Fetches all calendars available to the authenticated user.
+   * @returns An array of Calendar objects.
+   * @throws An error if the calendar home is not found or if the request fails.
+   */
   public async getCalendars(): Promise<Calendar[]> {
     if (!this.calendarHome) {
       throw new Error("Calendar home not found.");

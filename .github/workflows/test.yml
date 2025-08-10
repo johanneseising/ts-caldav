@@ -35,4 +35,6 @@ jobs:
                    tests/timezone.test.ts \
                    tests/url-duplication-fix.test.ts \
                    tests/alarms.test.ts \
-                   tests/description-encoding.test.ts
+                   tests/description-encoding.test.ts \
+                   tests/cache.test.ts \
+                   tests/todos.test.ts

@@ -110,3 +110,9 @@ export interface Todo {
   alarms?: Alarm[];
   sortOrder?: number;
 }
+
+export interface CalDAVClientCache {
+  userPrincipal: string;
+  calendarHome: string;
+  prodId?: string;
+}
